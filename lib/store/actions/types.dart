@@ -57,3 +57,12 @@ class UpdateDispatchMsg {
 
   UpdateDispatchMsg(this.message);
 }
+
+// Replace current state list of messages
+class ReplaceListOfMessages {
+  List<dynamic> messages;
+
+  get listOfMessages => this.messages;
+
+  ReplaceListOfMessages(this.messages);
+}

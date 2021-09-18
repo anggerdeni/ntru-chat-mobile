@@ -146,6 +146,9 @@ class _SignalListState extends State<SignalList> {
                                                     receiverPubkey:
                                                         filteredUsers[index]
                                                             .pubkey,
+                                                    receiverName:
+                                                        filteredUsers[index]
+                                                            .name  
                                                   )),
                                         );
                                       },
@@ -160,8 +163,7 @@ class _SignalListState extends State<SignalList> {
                                         ),
                                         title: Text(filteredUsers[index].name),
                                         subtitle: Text(
-                                          filteredUsers[index].name +
-                                              ' is on Signal',
+                                          filteredUsers[index].name,
                                           style: TextStyle(fontSize: 12.0),
                                         ),
                                         trailing: new Column(

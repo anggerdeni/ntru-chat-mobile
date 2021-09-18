@@ -19,7 +19,7 @@ class ChatState {
   final String activeRoom;
 
   // Chat Messages
-  final List<Map<String, dynamic>> messages;
+  final List<dynamic> messages;
 
   // Chat State
   ChatState({
@@ -41,7 +41,7 @@ class ChatState {
     List<UserData> allUsers,
     String activeRoom,
     String activeUser,
-    List<Map<String, dynamic>> messages,
+    List<dynamic> messages,
   }) {
     return ChatState(
         errMsg: errMsg ?? this.errMsg,
@@ -77,15 +77,20 @@ ChatState authReducer(ChatState state, dynamic action) {
   }
 
   if (action is UpdateMessagesAction) {
-    List<Map<String, dynamic>> messages = state.messages;
+    List<dynamic> messages = state.messages;
 
     // Check if any message with same Id exists
     dynamic msgChecker =
         messages.where((m) => m["id"] == action.allMessages['id']);
 
-    if (msgChecker.length > 0) {
-    } else {
+    if (msgChecker.length == 0) {
       messages.add(action.allMessages);
+      messages.sort((a, b) {
+        int t1,t2;
+        if(a['time'] is int) {t1 = a['time'];} else if (a['time'] is String) {t1 = int.parse(a['time']);} else {t1 = 0;}
+        if(b['time'] is int) {t2 = b['time'];} else if (b['time'] is String) {t2 = int.parse(b['time']);} else {t2 = 0;}
+        return t1 - t2;
+      });
       return state.copyWith(messages: messages);
     }
   }
@@ -97,11 +102,20 @@ ChatState authReducer(ChatState state, dynamic action) {
     dynamic msgChecker =
         messages.where((m) => m["id"] == action.updateMsg['id']);
 
-    if (msgChecker.length > 0) {
-    } else {
+    if (msgChecker.length == 0) {
       messages.add(action.updateMsg);
+      messages.sort((a, b) {
+        int t1,t2;
+        if(a['time'] is int) {t1 = a['time'];} else if (a['time'] is String) {t1 = int.parse(a['time']);} else {t1 = 0;}
+        if(b['time'] is int) {t2 = b['time'];} else if (b['time'] is String) {t2 = int.parse(b['time']);} else {t2 = 0;}
+        return t1 - t2;
+      });
       return state.copyWith(messages: messages);
     }
+  }
+
+  if (action is ReplaceListOfMessages) {
+    return state.copyWith(messages: action.listOfMessages);
   }
 
   return state;

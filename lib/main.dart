@@ -22,6 +22,7 @@ final store = new Store<ChatState>(reducers,
 
 Future<void> main() async {
   await Hive.initFlutter();
+  await Hive.openBox('inbox');
   runApp(MyApp(store: store));
 }
 

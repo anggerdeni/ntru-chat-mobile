@@ -17,18 +17,21 @@ class Inbox extends StatefulWidget {
       {Key key,
       @required this.senderMe,
       @required this.receiver,
-      @required this.receiverPubkey})
+      @required this.receiverPubkey,
+      @required this.receiverName})
       : super(key: key);
 
   final String senderMe;
   final String receiver;
   final String receiverPubkey;
+  final String receiverName;
 
   @override
   _InboxState createState() => new _InboxState(
       senderMe: this.senderMe,
       receiver: this.receiver,
-      receiverPubkey: this.receiverPubkey);
+      receiverPubkey: this.receiverPubkey,
+      receiverName: this.receiverName);
 }
 
 class _InboxState extends State<Inbox> {
@@ -37,13 +40,15 @@ class _InboxState extends State<Inbox> {
   String senderMe;
   String receiver;
   String receiverPubkey;
+  String receiverName;
 
   static const _boxName = 'inbox';
 
   _InboxState(
       {@required this.senderMe,
       @required this.receiver,
-      @required this.receiverPubkey});
+      @required this.receiverPubkey,
+      @required this.receiverName});
 
   // Set the Text Message
   String _txtMsg = "";
@@ -51,9 +56,8 @@ class _InboxState extends State<Inbox> {
   var txtController = TextEditingController();
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
-    await Hive.openBox(_boxName);
 
     // Reset Messages
     store.state.messages.clear();
@@ -67,13 +71,14 @@ class _InboxState extends State<Inbox> {
     try {
       var box = Hive.box(_boxName);
       if (box.get(this.receiver) == null) {
-        box.put(
-          this.receiver,
-          ChatHistory()
-            ..sessionKey = 'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE='
-            ..messages = []
-        );
+        Map<String, dynamic> chatHistory = new Map();
+        chatHistory['session_key'] =
+            'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=';
+        chatHistory['messages'] = [];
+        box.put(this.receiver, chatHistory);
       }
+      var hiveChatHistory = box.get(this.receiver);
+
       // Configure socket transports must be sepecified
       socket = io(GlobalConstants.backendUrl, <String, dynamic>{
         'transports': ['websocket'],
@@ -100,8 +105,20 @@ class _InboxState extends State<Inbox> {
         message["senderEmail"] = data["senderEmail"];
         message["receiverEmail"] = data["receiverEmail"];
         message["txtMsg"] = data["txtMsg"];
+        message["time"] = data["time"];
         message["sender"] = data["sender"] == store.state.activeUser;
 
+        // Check if any message with same Id exists
+        dynamic msgChecker =
+            hiveChatHistory['messages'].where((m) => m["id"] == message["id"]);
+
+        if (msgChecker.length == 0) {
+          Map<String, dynamic> chatHistory = new Map();
+          chatHistory['session_key'] = hiveChatHistory['session_key'];
+          chatHistory['messages'] = hiveChatHistory['messages'];
+          chatHistory['messages'].add(message);
+          box.put(this.receiver, chatHistory);
+        }
         store.dispatch(new UpdateDispatchMsg(message));
       });
 
@@ -111,6 +128,30 @@ class _InboxState extends State<Inbox> {
           store: store,
           currentUserEmail: store.state.user.email,
           otherUser: this.receiver));
+      List<dynamic> listOfMessages = [];
+      for (int i = 0; i < hiveChatHistory['messages'].length; i++) {
+        Map<String, dynamic> chat = new Map();
+        chat["id"] = hiveChatHistory['messages'][i]["_id"];
+        chat["roomID"] = hiveChatHistory['messages'][i]["roomID"];
+        chat["senderEmail"] = hiveChatHistory['messages'][i]["senderEmail"];
+        chat["receiverEmail"] = hiveChatHistory['messages'][i]["receiverEmail"];
+        chat["txtMsg"] = hiveChatHistory['messages'][i]["txtMsg"];
+        chat["time"] = hiveChatHistory['messages'][i]["time"];
+        chat["sender"] = hiveChatHistory['messages'][i]["senderEmail"] ==
+            store.state.user.email;
+
+        dynamic msgChecker =
+            hiveChatHistory['messages'].where((m) => m["id"] == chat["id"]);
+
+        if (msgChecker.length == 0) {
+          Map<String, dynamic> chatHistory = new Map();
+          chatHistory['session_key'] = hiveChatHistory['session_key'];
+          chatHistory['messages'] = hiveChatHistory['messages'];
+          chatHistory['messages'].add(chat);
+          listOfMessages.add(chat);
+        }
+      }
+      store.dispatch(new ReplaceListOfMessages(listOfMessages));
 
       // Group P2P unique chats
       store.dispatch(groupUniqueChats(socket: socket, store: store));
@@ -121,7 +162,6 @@ class _InboxState extends State<Inbox> {
 
   @override
   Widget build(BuildContext context) {
-    User currentUser = store.state.user;
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -137,7 +177,7 @@ class _InboxState extends State<Inbox> {
               CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Text(
-                  getInitialCharFromWords(currentUser.name),
+                  getInitialCharFromWords(receiverName),
                   style: TextStyle(
                     fontSize: 10,
                   ),
@@ -145,7 +185,7 @@ class _InboxState extends State<Inbox> {
               ),
               Padding(
                 padding: EdgeInsets.only(left: 10),
-                child: Text("cUser", style: TextStyle(fontSize: 14)),
+                child: Text(receiverName ?? '', style: TextStyle(fontSize: 14)),
               ),
               Padding(
                 padding: EdgeInsets.only(left: 2),
@@ -181,42 +221,45 @@ class _InboxState extends State<Inbox> {
             StoreConnector<ChatState, List<dynamic>>(
                 converter: (store) => store.state.messages,
                 builder: (_, cMsgs) {
-                  return ListView.builder(
-                    itemCount: cMsgs.length,
-                    shrinkWrap: true,
-                    padding: EdgeInsets.only(top: 10, bottom: 10),
-                    physics: NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      String txtMsg = cMsgs[index]["txtMsg"];
-                      bool sender = cMsgs[index]["sender"];
+                  return SingleChildScrollView(
+                    reverse: true,
+                    child: ListView.builder(
+                      itemCount: cMsgs.length,
+                      shrinkWrap: true,
+                      padding: EdgeInsets.only(top: 10, bottom: 70),
+                      physics: NeverScrollableScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        String txtMsg = cMsgs[index]["txtMsg"];
+                        bool sender = cMsgs[index]["sender"];
 
-                      return Container(
-                        padding: EdgeInsets.only(
-                            left: 14, right: 14, top: 10, bottom: 10),
-                        child: Align(
-                          alignment: (sender == true
-                              ? Alignment.topLeft
-                              : Alignment.topRight),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: (sender == true
-                                  ? Color(0xFF1EA955)
-                                  : Colors.grey.shade200),
-                            ),
-                            padding: EdgeInsets.all(16),
-                            child: Text(
-                              txtMsg,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: sender == true
-                                      ? Colors.white
-                                      : Colors.black87),
+                        return Container(
+                          padding: EdgeInsets.only(
+                              left: 14, right: 14, top: 10, bottom: 10),
+                          child: Align(
+                            alignment: (sender == true
+                                ? Alignment.topLeft
+                                : Alignment.topRight),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: (sender == true
+                                    ? Color(0xFF1EA955)
+                                    : Colors.grey.shade200),
+                              ),
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                txtMsg,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: sender == true
+                                        ? Colors.white
+                                        : Colors.black87),
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   );
                 }),
             Align(

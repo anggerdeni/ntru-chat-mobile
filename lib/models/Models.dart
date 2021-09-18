@@ -74,6 +74,6 @@ class ChatHistory extends HiveObject {
   String sessionKey;
 
   @HiveField(1)
-  List<Message> messages;
+  List<dynamic> messages;
 }
 

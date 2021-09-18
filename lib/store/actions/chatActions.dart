@@ -7,6 +7,7 @@ import 'package:ntruchat/main.dart';
 import 'package:ntruchat/store/actions/types.dart';
 import 'package:ntruchat/store/reducer.dart';
 import 'package:uuid/uuid.dart';
+import 'package:hive/hive.dart';
 
 import 'package:socket_io_client/socket_io_client.dart';
 
@@ -72,6 +73,7 @@ Future<void> onSend({
 }) {
   if (txtMsg == "") {
   } else {
+    const _boxName = 'inbox';
     final now = new DateTime.now();
     // String formatedTime = DateFormat('yMd').format(now);
     dynamic formatedTime = DateTime.now().toUtc().microsecondsSinceEpoch;
@@ -85,9 +87,22 @@ Future<void> onSend({
     composeMsg['time'] = formatedTime;
     composeMsg['sender'] = true;
 
-    store.dispatch(new UpdateMessagesAction(composeMsg));
-
+    var box = Hive.box(_boxName);
+    if (box.get(receiverEmail) == null) {
+      Map<String, dynamic> chatHistory = new Map();
+      chatHistory['session_key'] =
+          'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=';
+      chatHistory['messages'] = [];
+      box.put(receiverEmail, chatHistory);
+    }
+    var hiveChatHistory = box.get(receiverEmail);
+    Map<String, dynamic> chatHistory = new Map();
+    chatHistory['session_key'] = hiveChatHistory['session_key'];
+    chatHistory['messages'] = hiveChatHistory['messages'];
+    chatHistory['messages'].add(composeMsg);
+    box.put(receiverEmail, chatHistory);
     socket.emit('sendTouser', composeMsg);
+    store.dispatch(new UpdateDispatchMsg(composeMsg));
   }
 }
 
@@ -96,20 +111,19 @@ Future<void> loadUniqueChats(
     Socket socket,
     String currentUserEmail,
     String otherUser}) async {
-  Map<String, dynamic> ChatDetails = new Map();
-  ChatDetails["senderEmail"] = currentUserEmail;
-  ChatDetails["receiverEmail"] = otherUser;
+  Map<String, dynamic> chatDetails = new Map();
+  chatDetails["senderEmail"] = currentUserEmail;
+  chatDetails["receiverEmail"] = otherUser;
 
-  socket.emit('load_user_chats', ChatDetails);
+  socket.emit('load_user_chats', chatDetails);
 }
 
 Future<void> groupUniqueChats({
   Store store,
   Socket socket,
 }) {
+  const _boxName = 'inbox';
   socket.on("loadUniqueChat", (chats) {
-    List<dynamic> uniqueMessages = [];
-
     if (chats.isEmpty) {
       return;
     } else {
@@ -122,13 +136,31 @@ Future<void> groupUniqueChats({
       chat["txtMsg"] = chats["txtMsg"];
       chat["sender"] = chats["senderEmail"] == store.state.user.email;
 
+      var box = Hive.box(_boxName);
+      if (box.get(chats["receiverEmail"]) == null) {
+        Map<String, dynamic> chatHistory = new Map();
+        chatHistory['session_key'] =
+            'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=';
+        chatHistory['messages'] = [];
+        box.put(chats["receiverEmail"], chatHistory);
+      }
+
+      var hiveChatHistory = box.get(chats["receiverEmail"]);
+
+      // Check if any message with same Id exists
+      dynamic msgChecker =
+          hiveChatHistory['messages'].where((m) => m["id"] == chats["_id"]);
+
+      if (msgChecker.length == 0) {
+        Map<String, dynamic> chatHistory = new Map();
+        chatHistory['session_key'] = hiveChatHistory['session_key'];
+        chatHistory['messages'] = hiveChatHistory['messages'];
+        chatHistory['messages'].add(chat);
+        box.put(chats["receiverEmail"], chatHistory);
+      }
+
       // Push all to messages
       store.dispatch(new UpdateMessagesAction(chat));
-
-      List<dynamic> allMessages = store.state.messages;
-
-      // You can regroup buy date and update the opened messages
-      // and dispatch to replace existing state messages
     }
   });
 }
