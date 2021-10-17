@@ -111,15 +111,6 @@ class _LoginState extends State<LoginMain> {
                                         _password = password;
                                       });
                                     },
-                                    decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                            borderSide: new BorderSide(
-                                                color: Color(0xffC4C4C4),
-                                                width: 2)),
-                                        hintText: 'Password',
-                                        hintStyle: TextStyle(
-                                          fontSize: 15.0,
-                                        )),
                                     textCapitalization: TextCapitalization.none,
                                   )),
                               Container(
