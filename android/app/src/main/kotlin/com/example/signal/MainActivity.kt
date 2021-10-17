@@ -1,4 +1,4 @@
-package com.example.signal
+package com.example.ntruchat
 
 import io.flutter.embedding.android.FlutterActivity
 

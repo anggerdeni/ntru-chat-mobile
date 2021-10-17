@@ -1,4 +1,4 @@
-# signal
+# NTRU-Chat
 
 A new Flutter project.
 

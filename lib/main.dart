@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
     return new StoreProvider(
         store: store,
         child: MaterialApp(
-            title: 'Flutter Signal App',
+            title: 'NTRU-Chat',
             theme: ThemeData(
               primarySwatch: Colors.blue,
               visualDensity: VisualDensity.adaptivePlatformDensity,

@@ -14,21 +14,21 @@ class UsersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: SignalList(),
+      child: NTRUChatList(),
     );
   }
 }
 
-class SignalList extends StatefulWidget {
-  SignalList({Key key, this.title}) : super(key: key);
+class NTRUChatList extends StatefulWidget {
+  NTRUChatList({Key key, this.title}) : super(key: key);
 
   final String title;
 
   @override
-  _SignalListState createState() => new _SignalListState();
+  _NTRUChatListState createState() => new _NTRUChatListState();
 }
 
-class _SignalListState extends State<SignalList> {
+class _NTRUChatListState extends State<NTRUChatList> {
   Socket socket;
 
   @override
@@ -84,7 +84,7 @@ class _SignalListState extends State<SignalList> {
           appBar: AppBar(
             backgroundColor: Color(0xFF1EA955),
             leading: CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: Color(0xFFEEFFB3),
               radius: 10,
               child: Text(
                 getInitialCharFromWords(currentUser.name),
@@ -163,15 +163,8 @@ class _SignalListState extends State<SignalList> {
                                         ),
                                         title: Text(filteredUsers[index].name),
                                         subtitle: Text(
-                                          filteredUsers[index].name,
+                                          filteredUsers[index].email,
                                           style: TextStyle(fontSize: 12.0),
-                                        ),
-                                        trailing: new Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: <Widget>[
-                                            new Text("date"),
-                                          ],
                                         ),
                                       )));
                                 },

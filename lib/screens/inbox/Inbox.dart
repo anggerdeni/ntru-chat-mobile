@@ -119,6 +119,11 @@ class _InboxState extends State<Inbox> {
           chatHistory['messages'].add(message);
           box.put(this.receiver, chatHistory);
         }
+        store.dispatch(loadUniqueChats(
+          socket: socket,
+          store: store,
+          currentUserEmail: store.state.user.email,
+          otherUser: this.receiver));
         store.dispatch(new UpdateDispatchMsg(message));
       });
 
@@ -175,7 +180,7 @@ class _InboxState extends State<Inbox> {
           title: Row(
             children: [
               CircleAvatar(
-                backgroundColor: Colors.white,
+                backgroundColor: Color(0xFFEEFFB3),
                 child: Text(
                   getInitialCharFromWords(receiverName),
                   style: TextStyle(
@@ -196,25 +201,6 @@ class _InboxState extends State<Inbox> {
               )
             ],
           ),
-          actions: <Widget>[
-            Padding(
-                padding: EdgeInsets.only(right: 20.0),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Icon(
-                    Ionicons.ios_videocam,
-                    size: 30.0,
-                  ),
-                )),
-            Padding(
-                padding: EdgeInsets.only(right: 20.0),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Icon(
-                    Icons.more_vert,
-                  ),
-                )),
-          ],
         ),
         body: Stack(
           children: <Widget>[
@@ -271,22 +257,6 @@ class _InboxState extends State<Inbox> {
                 color: Colors.white,
                 child: Row(
                   children: <Widget>[
-                    GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        height: 30,
-                        width: 30,
-                        decoration: BoxDecoration(
-                          color: Colors.lightBlue,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
                     SizedBox(
                       width: 15,
                     ),
@@ -294,7 +264,7 @@ class _InboxState extends State<Inbox> {
                       child: TextField(
                           controller: txtController,
                           decoration: InputDecoration(
-                              hintText: "Write message...",
+                              hintText: "Tulis Pesan",
                               hintStyle: TextStyle(color: Colors.black54),
                               border: InputBorder.none),
                           onChanged: (txtMsg) {
