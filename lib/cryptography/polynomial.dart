@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class Polynomial {
   int _N;
   List<int> _coefficients = [];
@@ -16,8 +14,10 @@ class Polynomial {
       this._coefficients[d] = 1;
   }
 
-  Polynomial.fromCommaSeparatedCoefficients(this._N, String commaSeparatedValues) {
-    this._coefficients = commaSeparatedValues.split(',').map((i) => int.parse(i)).toList();
+  Polynomial.fromCommaSeparatedCoefficients(
+      this._N, String commaSeparatedValues) {
+    this._coefficients =
+        commaSeparatedValues.split(',').map((i) => int.parse(i)).toList();
   }
 
   List<int> get coefficients {
@@ -46,6 +46,16 @@ class Polynomial {
     return Polynomial(this._N, result);
   }
 
+  Polynomial multiplyIntModInt(int b, int mod) {
+    List<int> result = [];
+
+    for (int i = 0; i < this._coefficients.length; i += 1) {
+      result.add((this._coefficients[i] * b) % mod);
+    }
+
+    return Polynomial(this._N, result);
+  }
+  
   Polynomial multiplyIntMod3(int b) {
     List<int> result = [];
 
@@ -55,9 +65,8 @@ class Polynomial {
 
     return Polynomial(this._N, result);
   }
-
+  
   Polynomial multPoly(Polynomial b, int modulo) {
-    // todo: modulo ?
     int N = this.N;
     Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
     for (int k = 0; k < N; k++) {
@@ -75,8 +84,43 @@ class Polynomial {
     return c;
   }
 
+  Polynomial multPolyModPowerOfTwo(Polynomial b, int mod) {
+    int N = this.N;
+    Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
+    for (int k = 0; k < N; k++) {
+      int ck1 = 0;
+      for (int i = 0; i <= k; i++) {
+        ck1 += this.coefficients[i] * b.coefficients[k - i];
+      }
+      int ck2 = 0;
+      for (int i = k + 1; i < N; i++) {
+        ck2 += this.coefficients[i] * b.coefficients[k + N - i];
+      }
+      int ck = c.coefficients[k] + ck1 + ck2;
+      c.coefficients[k] = ck & (mod - 1);
+    }
+    return c;
+  }
+
+  Polynomial multPolyModInt(Polynomial b, int mod) {
+    int N = this.N;
+    Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
+    for (int k = 0; k < N; k++) {
+      int ck1 = 0;
+      for (int i = 0; i <= k; i++) {
+        ck1 += this.coefficients[i] * b.coefficients[k - i];
+      }
+      int ck2 = 0;
+      for (int i = k + 1; i < N; i++) {
+        ck2 += this.coefficients[i] * b.coefficients[k + N - i];
+      }
+      int ck = c.coefficients[k] + ck1 + ck2;
+      c.coefficients[k] = ck % mod;
+    }
+    return c;
+  }
+
   Polynomial multPolyMod3(Polynomial b) {
-    // todo: modulo ?
     int N = this.N;
     Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
     for (int k = 0; k < N; k++) {
@@ -108,6 +152,42 @@ class Polynomial {
       }
       int ck = c.coefficients[k] + ck1 + ck2;
       c.coefficients[k] = ck % 2048;
+    }
+    return c;
+  }
+
+  Polynomial multPolyModCenterLiftPowerOfTwo(Polynomial b, int mod) {
+    int N = this.N;
+    Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
+    for (int k = 0; k < N; k++) {
+      int ck1 = 0;
+      for (int i = 0; i <= k; i++) {
+        ck1 += this.coefficients[i] * b.coefficients[k - i];
+      }
+      int ck2 = 0;
+      for (int i = k + 1; i < N; i++) {
+        ck2 += this.coefficients[i] * b.coefficients[k + N - i];
+      }
+      int ck = c.coefficients[k] + ck1 + ck2;
+      c.coefficients[k] = modCenterLiftModPowerOfTwo(ck, mod);
+    }
+    return c;
+  }
+
+  Polynomial multPolyModCenterLiftInt(Polynomial b, int mod) {
+    int N = this.N;
+    Polynomial c = Polynomial.fromDegree(N, d: 0, coeff: 0);
+    for (int k = 0; k < N; k++) {
+      int ck1 = 0;
+      for (int i = 0; i <= k; i++) {
+        ck1 += this.coefficients[i] * b.coefficients[k - i];
+      }
+      int ck2 = 0;
+      for (int i = k + 1; i < N; i++) {
+        ck2 += this.coefficients[i] * b.coefficients[k + N - i];
+      }
+      int ck = c.coefficients[k] + ck1 + ck2;
+      c.coefficients[k] = modCenterLiftModInt(ck, mod);
     }
     return c;
   }
@@ -148,6 +228,13 @@ class Polynomial {
     return c;
   }
 
+  Polynomial addIntModInt(int b, int mod) {
+    List<int> result = List.from(this._coefficients);
+    result[result.length - 1] = (result[result.length - 1] + b) % mod;
+
+    return Polynomial(this._N, result);
+  }
+
   Polynomial addIntMod3(int b) {
     List<int> result = List.from(this._coefficients);
     result[result.length - 1] = (result[result.length - 1] + b) % 3;
@@ -155,17 +242,10 @@ class Polynomial {
     return Polynomial(this._N, result);
   }
 
-  Polynomial addPolyMod2(Polynomial b) {
+  Polynomial addPolyModInt(Polynomial b, int mod) {
     Polynomial c = Polynomial.fromDegree(this.N, d: 0, coeff: 0);
     for (int i = 0; i < this.N; i++)
-      c.coefficients[i] = (this.coefficients[i] + b.coefficients[i]) % 2;
-    return c;
-  }
-
-  Polynomial addPolyMod3(Polynomial b) {
-    Polynomial c = Polynomial.fromDegree(this.N, d: 0, coeff: 0);
-    for (int i = 0; i < this.N; i++)
-      c.coefficients[i] = (this.coefficients[i] + b.coefficients[i]) % 3;
+      c.coefficients[i] = (this.coefficients[i] + b.coefficients[i]) % mod;
     return c;
   }
 
@@ -176,6 +256,14 @@ class Polynomial {
     return c;
   }
 
+  Polynomial addPolyModPowerOfTwo(Polynomial b, int mod) {
+    Polynomial c = Polynomial.fromDegree(this.N, d: 0, coeff: 0);
+    for (int i = 0; i < this.N; i++)
+      c.coefficients[i] =
+          (this.coefficients[i] + b.coefficients[i]) & (mod - 1);
+    return c;
+  }
+
   Polynomial substractPoly(Polynomial b, int modulo) {
     Polynomial c = Polynomial.fromDegree(this.N, d: 0, coeff: 0);
     for (int i = 0; i < this.N; i++)
@@ -183,16 +271,34 @@ class Polynomial {
     return c;
   }
 
-  Polynomial substractPolyMod3(Polynomial b) {
+  Polynomial substractPolyModInt(Polynomial b, int mod) {
     Polynomial c = Polynomial.fromDegree(this.N, d: 0, coeff: 0);
     for (int i = 0; i < this.N; i++)
-      c.coefficients[i] = (this.coefficients[i] - b.coefficients[i]) % 3;
+      c.coefficients[i] = (this.coefficients[i] - b.coefficients[i]) % mod;
     return c;
   }
 
   Polynomial reduce(int p) {
     return Polynomial(
         this._N, this._coefficients.map((elem) => elem % p).toList());
+  }
+
+  int modCenterLiftModInt(int a, int mod) {
+    int tmpResult = (mod + a) % mod;
+    int tmpResult2 = tmpResult - mod;
+    if (tmpResult2 * tmpResult2 < tmpResult * tmpResult) {
+      return tmpResult - mod;
+    }
+    return tmpResult;
+  }
+
+  int modCenterLiftModPowerOfTwo(int a, int mod) {
+    int tmpResult = (mod + a) & (mod - 1);
+    int tmpResult2 = tmpResult - mod;
+    if (tmpResult2 * tmpResult2 < tmpResult * tmpResult) {
+      return tmpResult - mod;
+    }
+    return tmpResult;
   }
 
   int modCenterLiftMod3(int a) {

@@ -59,7 +59,7 @@ class _LoginState extends State<LoginMain> {
                               child: null,
                             )),
                         StoreConnector<ChatState, String>(
-                            converter: (store) => store.state.errMsg,
+                            converter: (store) => store.state.errMsg!,
                             onWillChange: (prev, next) {},
                             builder: (_, errMsg) {
                               return Container(
@@ -87,7 +87,7 @@ class _LoginState extends State<LoginMain> {
                                           borderSide: new BorderSide(
                                               color: Color(0xffC4C4C4),
                                               width: 2)),
-                                      hintText: 'mail@gmail.com',
+                                      hintText: 'mail@example.com',
                                       hintStyle: TextStyle(fontSize: 15.0),
                                     ),
                                     textCapitalization: TextCapitalization.none,
@@ -95,6 +95,17 @@ class _LoginState extends State<LoginMain> {
                               Padding(
                                   padding: EdgeInsets.only(top: 20.0),
                                   child: TextField(
+                                    obscureText: true,
+                                    enableSuggestions: false,
+                                    autocorrect: false,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                          borderSide: new BorderSide(
+                                              color: Color(0xffC4C4C4),
+                                              width: 2)),
+                                      hintText: 'Password',
+                                      hintStyle: TextStyle(fontSize: 15.0),
+                                    ),
                                     onChanged: (password) {
                                       setState(() {
                                         _password = password;

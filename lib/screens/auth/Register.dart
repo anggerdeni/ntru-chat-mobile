@@ -66,7 +66,7 @@ class _RegisterState extends State<RegisterMain> {
                             )),
                         //* Error Msgs *//
                         StoreConnector<ChatState, String>(
-                            converter: (store) => store.state.errMsg,
+                            converter: (store) => store.state.errMsg!,
                             onWillChange: (prev, next) {},
                             builder: (_, errMsg) {
                               return Container(
@@ -124,6 +124,9 @@ class _RegisterState extends State<RegisterMain> {
                               Padding(
                                   padding: EdgeInsets.only(top: 20.0),
                                   child: TextField(
+                                    obscureText: true,
+                                    enableSuggestions: false,
+                                    autocorrect: false,
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(
                                           borderSide: new BorderSide(
@@ -144,6 +147,9 @@ class _RegisterState extends State<RegisterMain> {
                               Padding(
                                   padding: EdgeInsets.only(top: 20.0),
                                   child: TextField(
+                                    obscureText: true,
+                                    enableSuggestions: false,
+                                    autocorrect: false,
                                     decoration: InputDecoration(
                                         border: OutlineInputBorder(
                                             borderSide: new BorderSide(

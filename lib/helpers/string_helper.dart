@@ -1,4 +1,4 @@
-String getInitialCharFromWords(String words) {
+String getInitialCharFromWords(String? words) {
   if(words == null) return '';
   var arrOfWord = words.trim().split(' ');
   switch (arrOfWord.length) {

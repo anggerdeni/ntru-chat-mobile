@@ -5,21 +5,21 @@ import 'package:ntruchat/models/Models.dart';
 import 'actions/types.dart';
 
 class ChatState {
-  final String errMsg;
+  final String? errMsg;
 
   // Authentication //
-  bool isAuthenticated = false;
-  final bool regLoading;
-  final bool logLoading;
-  final User user;
-  final List<UserData> allUsers;
+  bool? isAuthenticated = false;
+  final bool? regLoading;
+  final bool? logLoading;
+  final User? user;
+  final List<UserData>? allUsers;
 
   // Chats
-  final String activeUser;
-  final String activeRoom;
+  final String? activeUser;
+  final String? activeRoom;
 
   // Chat Messages
-  final List<dynamic> messages;
+  final List<dynamic>? messages;
 
   // Chat State
   ChatState({
@@ -36,12 +36,12 @@ class ChatState {
 
   ChatState copyWith({
     errMsg,
-    bool isAuthenticated,
-    User user,
-    List<UserData> allUsers,
-    String activeRoom,
-    String activeUser,
-    List<dynamic> messages,
+    bool? isAuthenticated,
+    User? user,
+    List<UserData>? allUsers,
+    String? activeRoom,
+    String? activeUser,
+    List<dynamic>? messages,
   }) {
     return ChatState(
         errMsg: errMsg ?? this.errMsg,
@@ -77,11 +77,11 @@ ChatState authReducer(ChatState state, dynamic action) {
   }
 
   if (action is UpdateMessagesAction) {
-    List<dynamic> messages = state.messages;
+    List<dynamic>? messages = state.messages;
 
     // Check if any message with same Id exists
     dynamic msgChecker =
-        messages.where((m) => m["id"] == action.allMessages['id']);
+        messages!.where((m) => m["id"] == action.allMessages['id']);
 
     if (msgChecker.length == 0) {
       messages.add(action.allMessages);
@@ -96,11 +96,11 @@ ChatState authReducer(ChatState state, dynamic action) {
   }
 
   if (action is UpdateDispatchMsg) {
-    List<dynamic> messages = store.state.messages;
+    List<dynamic>? messages = store.state.messages;
 
     // Check if any message with same Id exists
     dynamic msgChecker =
-        messages.where((m) => m["id"] == action.updateMsg['id']);
+        messages!.where((m) => m["id"] == action.updateMsg['id']);
 
     if (msgChecker.length == 0) {
       messages.add(action.updateMsg);

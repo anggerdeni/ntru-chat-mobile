@@ -9,38 +9,43 @@ import 'package:ntruchat/store/actions/types.dart';
 import 'package:ntruchat/store/reducer.dart';
 import 'package:ntruchat/constants/constants.dart';
 import 'package:ntruchat/helpers/string_helper.dart';
+import 'package:ntruchat/cryptography/kem.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 import 'package:hive/hive.dart';
+import 'package:ntruchat/cryptography/aes.dart';
 
 class Inbox extends StatefulWidget {
   Inbox(
-      {Key key,
+      {Key? key,
       @required this.senderMe,
       @required this.receiver,
       @required this.receiverPubkey,
+      @required this.selfPubkey,
       @required this.receiverName})
       : super(key: key);
 
-  final String senderMe;
-  final String receiver;
-  final String receiverPubkey;
-  final String receiverName;
+  final String? senderMe;
+  final String? receiver;
+  final String? receiverPubkey;
+  final String? selfPubkey;
+  final String? receiverName;
 
   @override
   _InboxState createState() => new _InboxState(
       senderMe: this.senderMe,
       receiver: this.receiver,
       receiverPubkey: this.receiverPubkey,
+      selfPubkey: this.selfPubkey,
       receiverName: this.receiverName);
 }
 
 class _InboxState extends State<Inbox> {
-  Socket socket;
-
-  String senderMe;
-  String receiver;
-  String receiverPubkey;
-  String receiverName;
+  late Socket socket;
+  String? senderMe;
+  String? receiver;
+  String? receiverPubkey;
+  String? selfPubkey;
+  String? receiverName;
 
   static const _boxName = 'inbox';
 
@@ -48,6 +53,7 @@ class _InboxState extends State<Inbox> {
       {@required this.senderMe,
       @required this.receiver,
       @required this.receiverPubkey,
+      @required this.selfPubkey,
       @required this.receiverName});
 
   // Set the Text Message
@@ -58,9 +64,9 @@ class _InboxState extends State<Inbox> {
   @override
   void initState() {
     super.initState();
-
+    
     // Reset Messages
-    store.state.messages.clear();
+    store.state.messages!.clear();
 
     // Connect to socket
     socketServer();
@@ -70,10 +76,9 @@ class _InboxState extends State<Inbox> {
   void socketServer() {
     try {
       var box = Hive.box(_boxName);
+      Map<String, dynamic> chatHistory = new Map();
       if (box.get(this.receiver) == null) {
-        Map<String, dynamic> chatHistory = new Map();
-        chatHistory['session_key'] =
-            'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=';
+        chatHistory['session_key'] = generateSecretKey(this.selfPubkey!, this.receiverPubkey!);
         chatHistory['messages'] = [];
         box.put(this.receiver, chatHistory);
       }
@@ -95,6 +100,8 @@ class _InboxState extends State<Inbox> {
         socket: socket,
         senderEmail: this.senderMe,
         receiverEmail: this.receiver,
+        receiverPubkey: this.receiverPubkey,
+        selfPubkey: this.selfPubkey,
       ));
 
       // Receiving messages
@@ -104,35 +111,40 @@ class _InboxState extends State<Inbox> {
         message["roomID"] = data["roomID"];
         message["senderEmail"] = data["senderEmail"];
         message["receiverEmail"] = data["receiverEmail"];
-        message["txtMsg"] = data["txtMsg"];
+        message["txtMsg"] = decryptAES(hiveChatHistory['session_key'], data["txtMsg"]);
         message["time"] = data["time"];
         message["sender"] = data["sender"] == store.state.activeUser;
 
-        // Check if any message with same Id exists
-        dynamic msgChecker =
-            hiveChatHistory['messages'].where((m) => m["id"] == message["id"]);
+        if(message["txtMsg"] != "") {
+          // Check if any message with same Id exists
+          dynamic msgChecker =
+              hiveChatHistory['messages'].where((m) => m["id"] == message["id"]);
 
-        if (msgChecker.length == 0) {
-          Map<String, dynamic> chatHistory = new Map();
-          chatHistory['session_key'] = hiveChatHistory['session_key'];
-          chatHistory['messages'] = hiveChatHistory['messages'];
-          chatHistory['messages'].add(message);
-          box.put(this.receiver, chatHistory);
+          if (msgChecker.length == 0) {
+            Map<String, dynamic> chatHistory = new Map();
+            chatHistory['session_key'] = hiveChatHistory['session_key'];
+            chatHistory['messages'] = hiveChatHistory['messages'];
+            chatHistory['messages'].add(message);
+            box.put(this.receiver, chatHistory);
+          }
+          store.dispatch(loadUniqueChats(
+            socket: socket,
+            store: store,
+            currentUserEmail: store.state.user!.email!,
+            otherUser: this.receiver!,));
+          store.dispatch(new UpdateDispatchMsg(message));
+
+          socket.emit('readMsg', {'msgId': data["_id"]});
         }
-        store.dispatch(loadUniqueChats(
-          socket: socket,
-          store: store,
-          currentUserEmail: store.state.user.email,
-          otherUser: this.receiver));
-        store.dispatch(new UpdateDispatchMsg(message));
+
       });
 
       // Load Unique User Chat(s)
       store.dispatch(loadUniqueChats(
           socket: socket,
           store: store,
-          currentUserEmail: store.state.user.email,
-          otherUser: this.receiver));
+          currentUserEmail: store.state.user!.email!,
+          otherUser: this.receiver!));
       List<dynamic> listOfMessages = [];
       for (int i = 0; i < hiveChatHistory['messages'].length; i++) {
         Map<String, dynamic> chat = new Map();
@@ -143,7 +155,7 @@ class _InboxState extends State<Inbox> {
         chat["txtMsg"] = hiveChatHistory['messages'][i]["txtMsg"];
         chat["time"] = hiveChatHistory['messages'][i]["time"];
         chat["sender"] = hiveChatHistory['messages'][i]["senderEmail"] ==
-            store.state.user.email;
+            store.state.user!.email;
 
         dynamic msgChecker =
             hiveChatHistory['messages'].where((m) => m["id"] == chat["id"]);
@@ -159,7 +171,7 @@ class _InboxState extends State<Inbox> {
       store.dispatch(new ReplaceListOfMessages(listOfMessages));
 
       // Group P2P unique chats
-      store.dispatch(groupUniqueChats(socket: socket, store: store));
+      store.dispatch(groupUniqueChats(socket: socket, store: store, receiverPubkey: this.receiverPubkey, selfPubkey: this.selfPubkey,));
     } catch (e) {
       print(e.toString());
     }
@@ -205,7 +217,7 @@ class _InboxState extends State<Inbox> {
         body: Stack(
           children: <Widget>[
             StoreConnector<ChatState, List<dynamic>>(
-                converter: (store) => store.state.messages,
+                converter: (store) => store.state.messages!,
                 builder: (_, cMsgs) {
                   return SingleChildScrollView(
                     reverse: true,
@@ -284,8 +296,10 @@ class _InboxState extends State<Inbox> {
                             socket: socket,
                             store: store,
                             txtMsg: _txtMsg,
-                            senderEmail: this.senderMe,
-                            receiverEmail: this.receiver));
+                            senderEmail: this.senderMe!,
+                            receiverEmail: this.receiver!,
+                            selfPubkey: this.selfPubkey,
+                            receiverPubkey: this.receiverPubkey));
 
                         // Reset the text Message
                         setState(() {

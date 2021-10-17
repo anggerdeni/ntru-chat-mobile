@@ -1,3 +1,4 @@
+// @dart=2.12.0
 import 'package:flutter/material.dart';
 import 'package:redux/redux.dart';
 import 'package:redux_thunk/redux_thunk.dart';
@@ -27,14 +28,14 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final Store<ChatState> store;
+  final Store<ChatState>? store;
 
   MyApp({this.store});
 
   @override
   Widget build(BuildContext context) {
     return new StoreProvider(
-        store: store,
+        store: store!,
         child: MaterialApp(
             title: 'NTRU-Chat',
             theme: ThemeData(

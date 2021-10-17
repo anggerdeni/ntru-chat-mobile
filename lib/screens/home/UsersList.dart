@@ -20,16 +20,16 @@ class UsersList extends StatelessWidget {
 }
 
 class NTRUChatList extends StatefulWidget {
-  NTRUChatList({Key key, this.title}) : super(key: key);
+  NTRUChatList({Key? key, this.title}) : super(key: key);
 
-  final String title;
+  final String? title;
 
   @override
   _NTRUChatListState createState() => new _NTRUChatListState();
 }
 
 class _NTRUChatListState extends State<NTRUChatList> {
-  Socket socket;
+  late Socket socket;
 
   @override
   void initState() {
@@ -37,12 +37,12 @@ class _NTRUChatListState extends State<NTRUChatList> {
     socketServer();
 
     // Emit to Get all users in Database
-    User currentUser = store.state.user;
+    User currentUser = store.state.user!;
     socket.emit("_getUsers", {'senderEmail': currentUser.email});
 
     // Gotten users to store
     socket.on("_allUsers", (allUsers) {
-      List<UserData> users = [];
+      List<UserData>? users = [];
 
       for (var u in allUsers) {
         UserData _users =
@@ -50,7 +50,7 @@ class _NTRUChatListState extends State<NTRUChatList> {
         users.add(_users);
       }
 
-      users.where((user) => user.email == store.state.user.email).toList();
+      users.where((user) => user.email == store.state.user!.email).toList();
 
       store.dispatch(new UpdateAllUserAction(users));
     });
@@ -77,7 +77,7 @@ class _NTRUChatListState extends State<NTRUChatList> {
 
   @override
   Widget build(BuildContext context) {
-    User currentUser = store.state.user;
+    User currentUser = store.state.user!;
     return Material(
       child: SafeArea(
         child: Scaffold(
@@ -98,14 +98,14 @@ class _NTRUChatListState extends State<NTRUChatList> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(left: 10),
-                  child: Text(currentUser.name, style: TextStyle(fontSize: 14)),
+                  child: Text(currentUser.name!, style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),
           ),
           body: Container(
             child: Column(children: [
-              StoreConnector<ChatState, List<UserData>>(
+              StoreConnector<ChatState, List<UserData>?>(
                   converter: (store) => store.state.allUsers,
                   onWillChange: (prev, next) {},
                   builder: (_, allUsers) {
@@ -117,11 +117,11 @@ class _NTRUChatListState extends State<NTRUChatList> {
                     }
 
                     List<dynamic> filteredUsers = allUsers
-                        .where((user) => user.email != store.state.user.email)
+                        .where((user) => user.email != store.state.user!.email)
                         .toList();
 
                     return StoreConnector<ChatState, User>(
-                        converter: (store) => store.state.user,
+                        converter: (store) => store.state.user!,
                         onWillChange: (prev, next) {},
                         builder: (_, user) {
                           return Container(
@@ -139,13 +139,14 @@ class _NTRUChatListState extends State<NTRUChatList> {
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) => Inbox(
-                                                    senderMe: user.email,
+                                                    senderMe: user.email!,
                                                     receiver:
                                                         filteredUsers[index]
                                                             .email,
                                                     receiverPubkey:
                                                         filteredUsers[index]
                                                             .pubkey,
+                                                    selfPubkey: user.pubkey,
                                                     receiverName:
                                                         filteredUsers[index]
                                                             .name  

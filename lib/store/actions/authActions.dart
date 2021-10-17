@@ -14,12 +14,12 @@ import 'dart:convert';
 
 // Load user details
 Future<void> loadUser(
-    {Store<ChatState> store, BuildContext context, storage}) async {
+    {Store<ChatState>? store, BuildContext? context, storage}) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  String _token = prefs.getString("apiToken") ?? null;
+  String? _token = prefs.getString("apiToken") ?? null;
 
   final url = Uri.parse('${GlobalConstants.backendUrl}/login/user');
-  Map<String, String> headers = {
+  Map<String, String?> headers = {
     "Content-type": "application/json",
     "x-api-token": _token
   };
@@ -31,7 +31,7 @@ Future<void> loadUser(
     prefs.remove("apiToken");
     new Future.delayed(Duration(seconds: 3), () {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => Login()));
+          context!, MaterialPageRoute(builder: (context) => Login()));
     });
   }
 
@@ -40,21 +40,21 @@ Future<void> loadUser(
     Map<String, dynamic> body = json.decode(response.body);
     User user =
         User(email: body['email'], name: body['name'], pubkey: body['pubkey']);
-    store.dispatch(new UpdateUserAction(user));
+    store!.dispatch(new UpdateUserAction(user));
 
     await Future.delayed(Duration(seconds: 3), () {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => UsersList()));
+          context!, MaterialPageRoute(builder: (context) => UsersList()));
     });
   }
 }
 
 // Login a user action
 Future<void> login(
-    {Store<ChatState> store,
+    {Store<ChatState>? store,
     email,
     password,
-    BuildContext context,
+    BuildContext? context,
     storage}) async {
   final url = Uri.parse('${GlobalConstants.backendUrl}/login');
   Map<String, String> headers = {"Content-type": "application/json"};
@@ -79,7 +79,7 @@ Future<void> login(
       prefs.remove("apiToken");
       prefs.remove("privkey_f");
       prefs.remove("privkey_fp");
-      store.dispatch(new UpdateErrorAction(body['msg']));
+      store!.dispatch(new UpdateErrorAction(body['msg']));
     }
   }
 
@@ -87,7 +87,7 @@ Future<void> login(
     final body = json.decode(response.body);
 
     if (body['user'] != null) {
-      store.dispatch(Types.ClearError);
+      store!.dispatch(Types.ClearError);
 
       // Grab Response data
       User user = User(
@@ -107,20 +107,20 @@ Future<void> login(
           ntru.privateKey[1].encodeCoefficientsToCommaSeparatedValue());
 
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => UsersList()));
+          context!, MaterialPageRoute(builder: (context) => UsersList()));
     }
   }
 }
 
 // Register a user action
 Future<void> register(
-    {Store<ChatState> store,
+    {Store<ChatState>? store,
     storage,
     name,
     email,
     password,
     cpassword,
-    BuildContext context}) async {
+    BuildContext? context}) async {
   final url = Uri.parse('${GlobalConstants.backendUrl}/users');
   Map<String, String> headers = {"Content-type": "application/json"};
   NTRU ntru = new NTRU();
@@ -146,7 +146,7 @@ Future<void> register(
     final body = json.decode(response.body);
     if (body['msg'] != "") {
       prefs.remove("apiToken");
-      store.dispatch(new UpdateErrorAction(body['msg']));
+      store!.dispatch(new UpdateErrorAction(body['msg']));
     }
   }
 
@@ -154,7 +154,7 @@ Future<void> register(
     dynamic body = json.decode(response.body);
     if (body['user'] != null) {
       // Clear any error
-      store.dispatch(Types.ClearError);
+      store!.dispatch(Types.ClearError);
 
       // Grab Response data
       User user = User(
@@ -177,7 +177,7 @@ Future<void> register(
 
       await Future.delayed(Duration(seconds: 3), () {
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => UsersList()));
+            context!, MaterialPageRoute(builder: (context) => UsersList()));
       });
     }
   }

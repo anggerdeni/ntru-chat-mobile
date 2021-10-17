@@ -3,10 +3,10 @@ import 'package:hive/hive.dart';
 
 // User
 class User {
-  final String id;
-  final String name;
-  final String email;
-  final String pubkey;
+  final String? id;
+  final String? name;
+  final String? email;
+  final String? pubkey;
 
   User({this.id, @required this.name, @required this.email, @required this.pubkey});
 }
@@ -23,9 +23,9 @@ class UserData {
 
 // Dynamic Data for users
 class ChatUsers {
-  String name;
-  String messageText;
-  String time;
+  String? name;
+  String? messageText;
+  String? time;
 
   ChatUsers({
     @required this.name,
@@ -36,9 +36,9 @@ class ChatUsers {
 
 // Chat Models
 class ChatUser {
-  String receiverEmail;
-  String senderEmail;
-  String roomID;
+  String? receiverEmail;
+  String? senderEmail;
+  String? roomID;
 
   ChatUser(
       {@required this.receiverEmail,
@@ -48,13 +48,13 @@ class ChatUser {
 
 // Message Model
 class Message {
-  String id;
-  String roomID;
-  String txtMsg;
-  String receiverEmail;
-  String senderEmail;
-  String time;
-  bool sender;
+  String? id;
+  String? roomID;
+  String? txtMsg;
+  String? receiverEmail;
+  String? senderEmail;
+  String? time;
+  bool? sender;
 
   Message(
       {this.id,
@@ -71,9 +71,9 @@ class Message {
 class ChatHistory extends HiveObject {
 
   @HiveField(0)
-  String sessionKey;
+  String? sessionKey;
 
   @HiveField(1)
-  List<dynamic> messages;
+  List<dynamic>? messages;
 }
 

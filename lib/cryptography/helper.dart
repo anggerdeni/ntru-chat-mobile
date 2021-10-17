@@ -2,13 +2,13 @@ import 'dart:math';
 import 'dart:convert';
 import 'polynomial.dart';
 
-Polynomial mod2ToMod2048(Polynomial a, Polynomial Fq) {
+Polynomial mod2ToModPowerOfTwo(Polynomial a, Polynomial Fq, int mod) {
   int v = 2;
-  while (v < 2048) {
+  while (v < mod) {
     v *= 2;
     Polynomial temp = Fq;
     temp = temp.multiplyInt(2).reduce(v);
-    Fq = (a.multPoly(Fq, 2048)).multPoly(Fq, 2048);
+    Fq = (a.multPolyModPowerOfTwo(Fq, mod)).multPolyModPowerOfTwo(Fq, mod);
     temp = temp.substractPoly(Fq, v);
     Fq = temp;
   }
@@ -55,8 +55,8 @@ Polynomial inverseF2(Polynomial a) {
       b = c;
       c = temp;
     }
-    f = f.addPolyMod2(g);
-    b = b.addPolyMod2(c);
+    f = f.addPolyModPowerOfTwo(g, 2);
+    b = b.addPolyModPowerOfTwo(c, 2);
   }
   if (b.coefficients[N] != 0) {
     throw new Exception('Not invertible 2');
@@ -73,9 +73,9 @@ Polynomial inverseF2(Polynomial a) {
   return Fq;
 }
 
-Polynomial inverseFq(Polynomial a) {
+Polynomial inverseFq(Polynomial a, int q) {
   Polynomial Fq = inverseF2(a);
-  return mod2ToMod2048(a, Fq);
+  return mod2ToModPowerOfTwo(a, Fq, q);
 }
 
 Polynomial inverseF3(Polynomial a) {
@@ -119,12 +119,12 @@ Polynomial inverseF3(Polynomial a) {
       c = temp;
     }
     if (f.coefficients[0] == g.coefficients[0]) {
-      f = f.substractPolyMod3(g);
-      b = b.substractPolyMod3(c);
+      f = f.substractPolyModInt(g, 3);
+      b = b.substractPolyModInt(c, 3);
     }
     else {
-      f = f.addPolyMod3(g);
-      b = b.addPolyMod3(c);
+      f = f.addPolyModInt(g, 3);
+      b = b.addPolyModInt(c, 3);
     }
   }
   if (b.coefficients[N] != 0) {
@@ -151,9 +151,11 @@ List<int> randomCoefficients(int length, int d, int neg_ones_diff) {
   return result;
 }
 
-Polynomial generateRandomPolynomial2(int N) {
+Polynomial generateRandomPolynomial(int N, { List<int>? options }) {
   List<int> coeff = List.filled(N, 0);
-  List<int> options = [-1,0,1];
+  if(options == null) {
+    options = [-1,0,1];
+  }
   Random rand = new Random();
   for (int i = 0; i < N; i++) {
     coeff[i] = options[rand.nextInt(options.length)];
@@ -162,7 +164,12 @@ Polynomial generateRandomPolynomial2(int N) {
   return new Polynomial(N, coeff);
 }
 
-Polynomial generateRandomPolynomial(int N) {
+Polynomial generateRandomPolynomial2(int N) {
+  List<int> coeff = randomCoefficients(N, (N/3).floor(), -1);
+  return new Polynomial(N, coeff);
+}
+
+Polynomial generateRandomPolynomialMethod2(int N) {
   List<int> coeff = randomCoefficients(N, (N/3).floor(), -1);
   return new Polynomial(N, coeff);
 }
@@ -199,24 +206,13 @@ Polynomial listOfIntToPolynomial(List<int> ints, int N) {
   return new Polynomial(N, coeffs);
 }
 
-String polynomialToBase64(Polynomial a) {
+List<int> polynomialToListOfInt(Polynomial a, {radix=2}) {
   int numChunks = 16;
 
   List<int> bytes = [];
   String str = a.coefficients.join();
   for(int i = 0, o = 0; i < numChunks; i++, o+=8) {
-    bytes.add(int.parse(str.substring(o, o+8), radix: 2));
-  }
-  return base64.encode(bytes);
-}
-
-List<int> polynomialToListOfInt(Polynomial a) {
-  int numChunks = 16;
-
-  List<int> bytes = [];
-  String str = a.coefficients.join();
-  for(int i = 0, o = 0; i < numChunks; i++, o+=8) {
-    bytes.add(int.parse(str.substring(o, o+8), radix: 2));
+    bytes.add(int.parse(str.substring(o, o+8), radix: radix));
   }
   return bytes;
 }

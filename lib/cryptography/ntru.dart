@@ -5,19 +5,19 @@ class NTRU {
   final int _N = 397;
   final int _p = 3;
   final int _q = 2048;
-  Polynomial f;
-  Polynomial fp;
-  Polynomial g;
-  Polynomial h;
+  late Polynomial f;
+  late Polynomial fp;
+  late Polynomial g;
+  late Polynomial h;
 
   NTRU() {
-    Polynomial f = new Polynomial(1, [0]);
-    Polynomial F = new Polynomial(1, [0]);
+    late Polynomial f;
+    late Polynomial F;
     Polynomial g = generateRandomPolynomial(_N);
-    Polynomial fInvP = new Polynomial(1, [0]);
-    Polynomial fInvQ = new Polynomial(1, [0]);
-    Polynomial testP = new Polynomial(1, [0]);
-    Polynomial testQ = new Polynomial(1, [0]);
+    late Polynomial fInvP;
+    late Polynomial fInvQ;
+    late Polynomial testP;
+    late Polynomial testQ;
 
     bool foundKeyPair = false;
     while(!foundKeyPair) {
@@ -27,7 +27,7 @@ class NTRU {
           F = generateRandomPolynomial(_N);
           f = F.multiplyIntMod3(_p).addIntMod3(1);
           fInvP = inverseF3(f);
-          fInvQ = inverseFq(f);
+          fInvQ = inverseFq(f, this._q);
           inverseFound = true;
         } catch(e) {
           continue;
@@ -51,6 +51,7 @@ class NTRU {
     this.f = Polynomial.fromCommaSeparatedCoefficients(this._N, strF);
     this.fp = Polynomial.fromCommaSeparatedCoefficients(this._N, strFp);
   }
+
 
   int get N {
     return this._N;
