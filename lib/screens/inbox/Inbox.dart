@@ -13,6 +13,7 @@ import 'package:ntruchat/cryptography/kem.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 import 'package:hive/hive.dart';
 import 'package:ntruchat/cryptography/aes.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Inbox extends StatefulWidget {
   Inbox(
@@ -73,12 +74,16 @@ class _InboxState extends State<Inbox> {
   }
 
   // Socket connection
-  void socketServer() {
+  void socketServer() async {
     try {
       var box = Hive.box(_boxName);
       Map<String, dynamic> chatHistory = new Map();
       if (box.get(this.receiver) == null) {
-        chatHistory['session_key'] = generateSecretKey(this.selfPubkey!, this.receiverPubkey!);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String privF = prefs.getString('privkey_f')!;
+        String privFp = prefs.getString('privkey_fp')!;
+
+        chatHistory['sessionKey'] = generateSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!);
         chatHistory['messages'] = [];
         box.put(this.receiver, chatHistory);
       }
@@ -111,7 +116,7 @@ class _InboxState extends State<Inbox> {
         message["roomID"] = data["roomID"];
         message["senderEmail"] = data["senderEmail"];
         message["receiverEmail"] = data["receiverEmail"];
-        message["txtMsg"] = decryptAES(hiveChatHistory['session_key'], data["txtMsg"]);
+        message["txtMsg"] = decryptAES(hiveChatHistory['sessionKey'], data["txtMsg"]);
         message["time"] = data["time"];
         message["sender"] = data["sender"] == store.state.activeUser;
 
@@ -122,7 +127,7 @@ class _InboxState extends State<Inbox> {
 
           if (msgChecker.length == 0) {
             Map<String, dynamic> chatHistory = new Map();
-            chatHistory['session_key'] = hiveChatHistory['session_key'];
+            chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
             chatHistory['messages'] = hiveChatHistory['messages'];
             chatHistory['messages'].add(message);
             box.put(this.receiver, chatHistory);
@@ -162,7 +167,7 @@ class _InboxState extends State<Inbox> {
 
         if (msgChecker.length == 0) {
           Map<String, dynamic> chatHistory = new Map();
-          chatHistory['session_key'] = hiveChatHistory['session_key'];
+          chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
           chatHistory['messages'] = hiveChatHistory['messages'];
           chatHistory['messages'].add(chat);
           listOfMessages.add(chat);

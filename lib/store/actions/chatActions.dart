@@ -10,7 +10,7 @@ import 'package:ntruchat/cryptography/kem.dart';
 import 'package:uuid/uuid.dart';
 import 'package:hive/hive.dart';
 import 'package:ntruchat/cryptography/aes.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
 Future<void> onUniqueChat({
@@ -77,19 +77,21 @@ Future<void>? onSend({
   String? receiverEmail,
   receiverPubkey,
   selfPubkey,
-}) {
+}) async {
   if (txtMsg == "") {
   } else {
     const _boxName = 'inbox';
     final now = new DateTime.now();
-    // String formatedTime = DateFormat('yMd').format(now);
     dynamic formatedTime = DateTime.now().toUtc().microsecondsSinceEpoch;
 
     var box = Hive.box(_boxName);
     Map<String, dynamic> chatHistory = new Map();
-    chatHistory['session_key'] = generateSecretKey(selfPubkey, receiverPubkey);
-    chatHistory['messages'] = [];
     if (box.get(receiverEmail) == null) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String privF = prefs.getString('privkey_f')!;
+      String privFp = prefs.getString('privkey_fp')!;
+      chatHistory['sessionKey'] = generateSecretKey(selfPubkey, privF, privFp, receiverPubkey);
+      chatHistory['messages'] = [];
       box.put(receiverEmail, chatHistory);
     }
 
@@ -97,14 +99,14 @@ Future<void>? onSend({
     Map<String, dynamic> composeMsg = new Map();
     composeMsg['_id'] = Uuid().v4();
     composeMsg['roomID'] = store!.state.activeRoom;
-    composeMsg['txtMsg'] = encryptAES(hiveChatHistory['session_key'], txtMsg);
+    composeMsg['txtMsg'] = encryptAES(hiveChatHistory['sessionKey'], txtMsg);
     composeMsg['receiverEmail'] = receiverEmail;
     composeMsg['senderEmail'] = senderEmail;
     composeMsg['time'] = formatedTime;
     composeMsg['sender'] = true;
 
     if(composeMsg['txtMsg'] != "") {
-      chatHistory['session_key'] = hiveChatHistory['session_key'];
+      chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
       chatHistory['messages'] = hiveChatHistory['messages'];
       chatHistory['messages'].add(composeMsg);
       box.put(receiverEmail, chatHistory);
@@ -135,14 +137,17 @@ Future<void>? groupUniqueChats({
   selfPubkey,
 }) {
   const _boxName = 'inbox';
-  socket!.on("loadUniqueChat", (chats) {
+  socket!.on("loadUniqueChat", (chats) async {
     if (chats.isEmpty) {
       return;
     } else {
       var box = Hive.box(_boxName);
       Map<String, dynamic> chatHistory = new Map();
       if (box.get(chats["receiverEmail"]) == null) {
-        chatHistory['session_key'] = generateSecretKey(selfPubkey, receiverPubkey);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String privF = prefs.getString('privkey_f')!;
+        String privFp = prefs.getString('privkey_fp')!;
+        chatHistory['sessionKey'] = generateSecretKey(selfPubkey, privF, privFp, receiverPubkey);
         chatHistory['messages'] = [];
         box.put(chats["receiverEmail"], chatHistory);
       }
@@ -153,7 +158,7 @@ Future<void>? groupUniqueChats({
       chat["senderEmail"] = chats["senderEmail"];
       chat["receiverEmail"] = chats["receiverEmail"];
       chat["time"] = chats["time"];
-      chat["txtMsg"] = decryptAES(hiveChatHistory['session_key'], chats["txtMsg"]);
+      chat["txtMsg"] = decryptAES(hiveChatHistory['sessionKey'], chats["txtMsg"]);
       chat["sender"] = chats["senderEmail"] == store!.state.user.email;
       
       if(chat["txtMsg"] != "") {
@@ -162,7 +167,7 @@ Future<void>? groupUniqueChats({
             hiveChatHistory['messages'].where((m) => m["id"] == chats["_id"]);
         if (msgChecker.length == 0) {
           Map<String, dynamic> chatHistory = new Map();
-          chatHistory['session_key'] = hiveChatHistory['session_key'];
+          chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
           chatHistory['messages'] = hiveChatHistory['messages'];
           chatHistory['messages'].add(chat);
           box.put(chats["receiverEmail"], chatHistory);

@@ -100,8 +100,7 @@ ChatState authReducer(ChatState state, dynamic action) {
 
     // Check if any message with same Id exists
     dynamic msgChecker =
-        messages!.where((m) => m["id"] == action.updateMsg['id']);
-
+        messages!.where((m) => m["_id"] == action.updateMsg['_id']);
     if (msgChecker.length == 0) {
       messages.add(action.updateMsg);
       messages.sort((a, b) {
