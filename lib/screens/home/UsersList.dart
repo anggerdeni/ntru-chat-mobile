@@ -9,6 +9,9 @@ import 'package:ntruchat/store/reducer.dart';
 import 'package:ntruchat/constants/constants.dart';
 import 'package:ntruchat/helpers/string_helper.dart';
 import 'package:socket_io_client/socket_io_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
+import 'package:ntruchat/cryptography/kem.dart';
 
 class UsersList extends StatelessWidget {
   @override
@@ -54,6 +57,20 @@ class _NTRUChatListState extends State<NTRUChatList> {
 
       store.dispatch(new UpdateAllUserAction(users));
     });
+
+    socket.on('kem', (data) async {
+      if(currentUser.email == data['receiverEmail']) {
+        var box = Hive.box('inbox');
+        Map<String, dynamic> chatHistory = new Map();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String privF = prefs.getString('privkey_f')!;
+        String privFp = prefs.getString('privkey_fp')!;
+        chatHistory['sessionKey'] = decryptSecretKey(data['receiverPubkey']!, privF, privFp, data['selfPubkey']!, data['encryptedKey']);
+        chatHistory['messages'] = [];
+        box.put(data['senderEmail'], chatHistory);
+        print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
+      }
+      });
   }
 
   // Socket Connection
@@ -98,7 +115,8 @@ class _NTRUChatListState extends State<NTRUChatList> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(left: 10),
-                  child: Text(currentUser.name!, style: TextStyle(fontSize: 14)),
+                  child:
+                      Text(currentUser.name!, style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),
@@ -132,6 +150,10 @@ class _NTRUChatListState extends State<NTRUChatList> {
                                 itemBuilder: (BuildContext context, int index) {
                                   return InkWell(
                                       splashColor: null,
+                                      onLongPress: () {
+                                        var box = Hive.box('inbox');
+                                        box.delete(filteredUsers[index].email);
+                                      },
                                       onTap: () {
                                         socket.close();
 
@@ -139,18 +161,16 @@ class _NTRUChatListState extends State<NTRUChatList> {
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) => Inbox(
-                                                    senderMe: user.email!,
-                                                    receiver:
-                                                        filteredUsers[index]
-                                                            .email,
-                                                    receiverPubkey:
-                                                        filteredUsers[index]
-                                                            .pubkey,
-                                                    selfPubkey: user.pubkey,
-                                                    receiverName:
-                                                        filteredUsers[index]
-                                                            .name  
-                                                  )),
+                                                  senderMe: user.email!,
+                                                  receiver: filteredUsers[index]
+                                                      .email,
+                                                  receiverPubkey:
+                                                      filteredUsers[index]
+                                                          .pubkey,
+                                                  selfPubkey: user.pubkey,
+                                                  receiverName:
+                                                      filteredUsers[index]
+                                                          .name)),
                                         );
                                       },
                                       child: Ink(

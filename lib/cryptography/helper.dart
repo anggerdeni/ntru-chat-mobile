@@ -189,13 +189,11 @@ Polynomial listOfIntToPolynomial(List<int> ints, int N) {
   return new Polynomial(N, coeffs);
 }
 
-List<int> polynomialToListOfInt(Polynomial a, {radix=2}) {
-  int numChunks = 16;
-
+List<int> polynomialToListOfInt(Polynomial a, {int numChunks = 16}) {
   List<int> bytes = [];
   String str = a.coefficients.join();
   for(int i = 0, o = 0; i < numChunks; i++, o+=8) {
-    bytes.add(int.parse(str.substring(o, o+8), radix: radix));
+    bytes.add(int.parse(str.substring(o, o+8), radix: 2));
   }
   return bytes;
 }

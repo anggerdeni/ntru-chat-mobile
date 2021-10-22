@@ -41,7 +41,7 @@ class Inbox extends StatefulWidget {
 }
 
 class _InboxState extends State<Inbox> {
-  late Socket socket;
+  Socket? socket;
   String? senderMe;
   String? receiver;
   String? receiverPubkey;
@@ -76,19 +76,6 @@ class _InboxState extends State<Inbox> {
   // Socket connection
   void socketServer() async {
     try {
-      var box = Hive.box(_boxName);
-      Map<String, dynamic> chatHistory = new Map();
-      if (box.get(this.receiver) == null) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String privF = prefs.getString('privkey_f')!;
-        String privFp = prefs.getString('privkey_fp')!;
-
-        chatHistory['sessionKey'] = generateSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!);
-        chatHistory['messages'] = [];
-        box.put(this.receiver, chatHistory);
-      }
-      var hiveChatHistory = box.get(this.receiver);
-
       // Configure socket transports must be sepecified
       socket = io(GlobalConstants.backendUrl, <String, dynamic>{
         'transports': ['websocket'],
@@ -96,10 +83,9 @@ class _InboxState extends State<Inbox> {
       });
 
       // Connect to websocket
-      socket.connect();
-
+      socket!.connect();
       // Handle socket events
-      socket.on('connect', (_) => print('connect: ${socket.id}'));
+      socket!.on('connect', (_) => print('connect: ${socket!.id}'));
       store.dispatch(onUniqueChat(
         store: store,
         socket: socket,
@@ -109,8 +95,32 @@ class _InboxState extends State<Inbox> {
         selfPubkey: this.selfPubkey,
       ));
 
+      var box = Hive.box(_boxName);
+      var receiverBox = await box.get(this.receiver);
+      Map<String, dynamic> chatHistory = new Map();
+      if (receiverBox == null) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String privF = prefs.getString('privkey_f')!;
+        String privFp = prefs.getString('privkey_fp')!;
+
+        List<String> kemProcess = generateSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!);
+        chatHistory['sessionKey'] = kemProcess[0];
+        print("${this.senderMe} initialize KEM for ${this.receiver} with encrypted session key ${chatHistory['sessionKey']}");
+        socket!.emit('kem', {
+          'senderEmail': this.senderMe,
+          'receiverEmail': this.receiver,
+          'receiverPubkey': this.receiverPubkey,
+          'selfPubkey': this.selfPubkey,
+          'encryptedKey': kemProcess[1]
+        });
+        chatHistory['messages'] = [];
+        box.put(this.receiver, chatHistory);
+      }
+      var hiveChatHistory = box.get(this.receiver);
+
       // Receiving messages
-      socket.on('dispatchMsg', (data) {
+      socket!.on('dispatchMsg', (data) async {
+        print("${data["receiverEmail"]} received encrypted message from ${data["senderEmail"]}: ${data["txtMsg"]} - ${data["hash"]}");
         Map<String, dynamic> message = new Map();
         message["id"] = data["_id"];
         message["roomID"] = data["roomID"];
@@ -139,9 +149,23 @@ class _InboxState extends State<Inbox> {
             otherUser: this.receiver!,));
           store.dispatch(new UpdateDispatchMsg(message));
 
-          socket.emit('readMsg', {'msgId': data["_id"]});
+          socket!.emit('readMsg', {'msgId': data["_id"]});
         }
 
+      });
+
+      socket!.on('kem', (data) async {
+        if(this.senderMe == data['receiverEmail']) {
+          var box = Hive.box(_boxName);
+          Map<String, dynamic> chatHistory = new Map();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String privF = prefs.getString('privkey_f')!;
+          String privFp = prefs.getString('privkey_fp')!;
+          chatHistory['sessionKey'] = decryptSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!, data['encryptedKey']);
+          chatHistory['messages'] = [];
+          box.put(this.receiver, chatHistory);
+          print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
+        }
       });
 
       // Load Unique User Chat(s)
@@ -158,6 +182,7 @@ class _InboxState extends State<Inbox> {
         chat["senderEmail"] = hiveChatHistory['messages'][i]["senderEmail"];
         chat["receiverEmail"] = hiveChatHistory['messages'][i]["receiverEmail"];
         chat["txtMsg"] = hiveChatHistory['messages'][i]["txtMsg"];
+        chat["hash"] = hiveChatHistory['messages'][i]["hash"];
         chat["time"] = hiveChatHistory['messages'][i]["time"];
         chat["sender"] = hiveChatHistory['messages'][i]["senderEmail"] ==
             store.state.user!.email;
@@ -176,7 +201,7 @@ class _InboxState extends State<Inbox> {
       store.dispatch(new ReplaceListOfMessages(listOfMessages));
 
       // Group P2P unique chats
-      store.dispatch(groupUniqueChats(socket: socket, store: store, receiverPubkey: this.receiverPubkey, selfPubkey: this.selfPubkey,));
+      store.dispatch(groupUniqueChats(socket: socket, store: store, receiverPubkey: this.receiverPubkey, selfPubkey: this.selfPubkey, senderEmail: this.senderMe));
     } catch (e) {
       print(e.toString());
     }

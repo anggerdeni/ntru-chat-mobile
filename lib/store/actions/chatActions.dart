@@ -10,6 +10,7 @@ import 'package:ntruchat/cryptography/kem.dart';
 import 'package:uuid/uuid.dart';
 import 'package:hive/hive.dart';
 import 'package:ntruchat/cryptography/aes.dart';
+import 'package:ntruchat/cryptography/hash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
@@ -81,25 +82,18 @@ Future<void>? onSend({
   if (txtMsg == "") {
   } else {
     const _boxName = 'inbox';
-    final now = new DateTime.now();
     dynamic formatedTime = DateTime.now().toUtc().microsecondsSinceEpoch;
 
     var box = Hive.box(_boxName);
     Map<String, dynamic> chatHistory = new Map();
-    if (box.get(receiverEmail) == null) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String privF = prefs.getString('privkey_f')!;
-      String privFp = prefs.getString('privkey_fp')!;
-      chatHistory['sessionKey'] = generateSecretKey(selfPubkey, privF, privFp, receiverPubkey);
-      chatHistory['messages'] = [];
-      box.put(receiverEmail, chatHistory);
-    }
-
     var hiveChatHistory = box.get(receiverEmail);
+
+    print("$senderEmail sent encrypted message to $receiverEmail: $txtMsg");
     Map<String, dynamic> composeMsg = new Map();
     composeMsg['_id'] = Uuid().v4();
     composeMsg['roomID'] = store!.state.activeRoom;
     composeMsg['txtMsg'] = encryptAES(hiveChatHistory['sessionKey'], txtMsg);
+    composeMsg['hash'] = sha256digest(txtMsg);
     composeMsg['receiverEmail'] = receiverEmail;
     composeMsg['senderEmail'] = senderEmail;
     composeMsg['time'] = formatedTime;
@@ -135,6 +129,7 @@ Future<void>? groupUniqueChats({
   Socket? socket,
   receiverPubkey,
   selfPubkey,
+  senderEmail
 }) {
   const _boxName = 'inbox';
   socket!.on("loadUniqueChat", (chats) async {
@@ -142,16 +137,7 @@ Future<void>? groupUniqueChats({
       return;
     } else {
       var box = Hive.box(_boxName);
-      Map<String, dynamic> chatHistory = new Map();
-      if (box.get(chats["receiverEmail"]) == null) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String privF = prefs.getString('privkey_f')!;
-        String privFp = prefs.getString('privkey_fp')!;
-        chatHistory['sessionKey'] = generateSecretKey(selfPubkey, privF, privFp, receiverPubkey);
-        chatHistory['messages'] = [];
-        box.put(chats["receiverEmail"], chatHistory);
-      }
-      var hiveChatHistory = box.get(chats["receiverEmail"]);
+      var hiveChatHistory = box.get(chats["senderEmail"]);
       Map<String, dynamic> chat = new Map();
       chat["id"] = chats["_id"];
       chat["roomID"] = chats["roomID"];
