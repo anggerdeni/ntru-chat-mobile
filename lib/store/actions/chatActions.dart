@@ -1,17 +1,11 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ntruchat/main.dart';
 import 'package:ntruchat/store/actions/types.dart';
 import 'package:ntruchat/store/reducer.dart';
-import 'package:ntruchat/cryptography/kem.dart';
 import 'package:uuid/uuid.dart';
 import 'package:hive/hive.dart';
 import 'package:ntruchat/cryptography/aes.dart';
-import 'package:ntruchat/cryptography/hash.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
 Future<void> onUniqueChat({
@@ -93,7 +87,6 @@ Future<void>? onSend({
     composeMsg['_id'] = Uuid().v4();
     composeMsg['roomID'] = store!.state.activeRoom;
     composeMsg['txtMsg'] = encryptAES(hiveChatHistory['sessionKey'], txtMsg);
-    composeMsg['hash'] = sha256digest(txtMsg);
     composeMsg['receiverEmail'] = receiverEmail;
     composeMsg['senderEmail'] = senderEmail;
     composeMsg['time'] = formatedTime;

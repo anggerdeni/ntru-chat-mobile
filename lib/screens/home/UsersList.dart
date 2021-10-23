@@ -65,7 +65,7 @@ class _NTRUChatListState extends State<NTRUChatList> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String privF = prefs.getString('privkey_f')!;
         String privFp = prefs.getString('privkey_fp')!;
-        chatHistory['sessionKey'] = decryptSecretKey(data['receiverPubkey']!, privF, privFp, data['selfPubkey']!, data['encryptedKey']);
+        chatHistory['sessionKey'] = decryptSecretKey(data['receiverPubkey']!, privF, privFp, data['selfPubkey']!, data['encryptedKey'], data['hash']);
         chatHistory['messages'] = [];
         box.put(data['senderEmail'], chatHistory);
         print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");

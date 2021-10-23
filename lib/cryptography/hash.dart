@@ -1,6 +1,8 @@
-import 'package:crypto/crypto.dart';
+import 'package:cryptography/dart.dart';
 import 'dart:convert';
 
-String sha256digest(message) {
-  return sha1.convert(utf8.encode(message)).toString();
+List<int> sha256bytes(message) {
+  const hasher = DartSha256();
+  final hash = hasher.hashSync(utf8.encode(message));
+  return hash.bytes;
 }

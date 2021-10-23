@@ -1,7 +1,9 @@
 import './ntru.dart';
 import './polynomial.dart';
 import './helper.dart';
+import './hash.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 List<String> generateSecretKey(String selfPublicKeyString, String privF, String privFp, String receiverPublicKeyString) {
   NTRU ntru = new NTRU();
@@ -16,10 +18,15 @@ List<String> generateSecretKey(String selfPublicKeyString, String privF, String 
   Polynomial encrypted = r
       .multPolyMod2048(receiverPublicKey)
       .addPolyMod2048(msg);
-  return [base64.encode(key), encrypted.encodeCoefficientsToCommaSeparatedValue()];
+  
+  String keySession = base64.encode(key);
+  Polynomial encryptedHash =  r
+      .multPolyMod2048(receiverPublicKey)
+      .addPolyMod2048(listOfIntToPolynomial(sha256bytes(keySession), N));
+  return [keySession, encrypted.encodeCoefficientsToCommaSeparatedValue(), encryptedHash.encodeCoefficientsToCommaSeparatedValue()];
 }
 
-String decryptSecretKey(String selfPublicKeyString, String privF, String privFp, String receiverPublicKeyString, String encryptedKey) {
+String decryptSecretKey(String selfPublicKeyString, String privF, String privFp, String receiverPublicKeyString, String encryptedKey, String hash) {
   NTRU ntru = new NTRU();
   int N = ntru.N;
 
@@ -27,5 +34,11 @@ String decryptSecretKey(String selfPublicKeyString, String privF, String privFp,
 
   Polynomial encryptedKeyPoly = Polynomial.fromCommaSeparatedCoefficients(N, encryptedKey);
   Polynomial key = ntru.decrypt(encryptedKeyPoly);
-  return base64.encode(polynomialToListOfInt(key, numChunks: 32));
+  String keySession = base64.encode(polynomialToListOfInt(key, numChunks: 32));
+
+  Polynomial polyHash = Polynomial.fromCommaSeparatedCoefficients(N, hash);
+  List<int> hashResult = polynomialToListOfInt(ntru.decrypt(polyHash), numChunks: 32);
+  List<int> hashCheck = sha256bytes(keySession);
+  if(listEquals(hashCheck, hashResult)) return keySession;
+  return "";
 }

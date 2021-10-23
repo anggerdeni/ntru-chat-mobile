@@ -105,13 +105,14 @@ class _InboxState extends State<Inbox> {
 
         List<String> kemProcess = generateSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!);
         chatHistory['sessionKey'] = kemProcess[0];
-        print("${this.senderMe} initialize KEM for ${this.receiver} with encrypted session key ${chatHistory['sessionKey']}");
+        print("${this.senderMe} initialize KEM for ${this.receiver} with encrypted session key ${chatHistory['sessionKey']} hash ${kemProcess[2]}");
         socket!.emit('kem', {
           'senderEmail': this.senderMe,
           'receiverEmail': this.receiver,
           'receiverPubkey': this.receiverPubkey,
           'selfPubkey': this.selfPubkey,
-          'encryptedKey': kemProcess[1]
+          'encryptedKey': kemProcess[1],
+          'hash': kemProcess[2]
         });
         chatHistory['messages'] = [];
         box.put(this.receiver, chatHistory);
@@ -120,7 +121,7 @@ class _InboxState extends State<Inbox> {
 
       // Receiving messages
       socket!.on('dispatchMsg', (data) async {
-        print("${data["receiverEmail"]} received encrypted message from ${data["senderEmail"]}: ${data["txtMsg"]} - ${data["hash"]}");
+        print("${data["receiverEmail"]} received encrypted message from ${data["senderEmail"]}: ${data["txtMsg"]}");
         Map<String, dynamic> message = new Map();
         message["id"] = data["_id"];
         message["roomID"] = data["roomID"];
@@ -149,7 +150,7 @@ class _InboxState extends State<Inbox> {
             otherUser: this.receiver!,));
           store.dispatch(new UpdateDispatchMsg(message));
 
-          socket!.emit('readMsg', {'msgId': data["_id"]});
+          socket!.emit('readMsg', {'data': data});
         }
 
       });
@@ -161,10 +162,13 @@ class _InboxState extends State<Inbox> {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           String privF = prefs.getString('privkey_f')!;
           String privFp = prefs.getString('privkey_fp')!;
-          chatHistory['sessionKey'] = decryptSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!, data['encryptedKey']);
+          chatHistory['sessionKey'] = decryptSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!, data['encryptedKey'], data['hash']);
           chatHistory['messages'] = [];
-          box.put(this.receiver, chatHistory);
-          print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
+
+          if(chatHistory['sessionKey'] != '') {
+            box.put(this.receiver, chatHistory);
+            print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
+          }
         }
       });
 
