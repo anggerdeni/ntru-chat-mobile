@@ -20,23 +20,23 @@ class NTRU {
     late Polynomial testQ;
 
     bool foundKeyPair = false;
-    while(!foundKeyPair) {
+    while (!foundKeyPair) {
       bool inverseFound = false;
-      while(!inverseFound) {
+      while (!inverseFound) {
         try {
           F = generateRandomPolynomial(_N);
           f = F.multiplyIntMod3(_p).addIntMod3(1);
           fInvP = inverseF3(f);
           fInvQ = inverseFq(f, this._q);
           inverseFound = true;
-        } catch(e) {
+        } catch (e) {
           continue;
         }
       }
       testP = fInvP.multPolyMod3(f);
-      testQ = fInvQ.multPoly(f,_q);
+      testQ = fInvQ.multPoly(f, _q);
 
-      if(testP.isOne() && testQ.isOne()) {
+      if (testP.isOne() && testQ.isOne()) {
         this.f = f;
         this.fp = fInvP;
         this.g = g;
@@ -47,11 +47,13 @@ class NTRU {
   }
 
   NTRU.fromKeyPair(String strH, String strF, String strFp) {
-    this.h = Polynomial.fromCommaSeparatedCoefficients(this._N, strH);
-    this.f = Polynomial.fromCommaSeparatedCoefficients(this._N, strF);
-    this.fp = Polynomial.fromCommaSeparatedCoefficients(this._N, strFp);
+    this.h = Polynomial.fromCommaSeparatedCoefficients(
+        this._N, strH);
+    this.f = Polynomial.fromCommaSeparatedCoefficients(
+        this._N, strF);
+    this.fp = Polynomial.fromCommaSeparatedCoefficients(
+        this._N, strFp);
   }
-
 
   int get N {
     return this._N;
@@ -66,8 +68,12 @@ class NTRU {
   }
 
   Polynomial encrypt(Polynomial message, Polynomial r) {
-    if(message.N != _N) throw new Exception('Message should have same N');
-    return r.multiplyIntMod2048(_p).multPolyMod2048(this.h).addPolyMod2048(message);
+    if (message.N != _N)
+      throw new Exception('Message should have same N');
+    return r
+        .multiplyIntMod2048(_p)
+        .multPolyMod2048(this.h)
+        .addPolyMod2048(message);
   }
 
   Polynomial decrypt(Polynomial cipher) {
