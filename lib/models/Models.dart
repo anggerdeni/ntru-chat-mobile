@@ -8,7 +8,11 @@ class User {
   final String? email;
   final String? pubkey;
 
-  User({this.id, @required this.name, @required this.email, @required this.pubkey});
+  User(
+      {this.id,
+      @required this.name,
+      @required this.email,
+      @required this.pubkey});
 }
 
 // User Data
@@ -69,11 +73,9 @@ class Message {
 // Chat History
 @HiveType(typeId: 0)
 class ChatHistory extends HiveObject {
-
   @HiveField(0)
   late List<int> sessionKey;
 
   @HiveField(1)
   List<dynamic>? messages;
 }
-

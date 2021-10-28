@@ -65,7 +65,7 @@ class _InboxState extends State<Inbox> {
   @override
   void initState() {
     super.initState();
-    
+
     // Reset Messages
     store.state.messages!.clear();
 
@@ -77,7 +77,8 @@ class _InboxState extends State<Inbox> {
   void socketServer() async {
     try {
       // Configure socket transports must be sepecified
-      socket = io(GlobalConstants.backendUrl, <String, dynamic>{
+      socket =
+          io(GlobalConstants.backendUrl, <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
       });
@@ -85,7 +86,8 @@ class _InboxState extends State<Inbox> {
       // Connect to websocket
       socket!.connect();
       // Handle socket events
-      socket!.on('connect', (_) => print('connect: ${socket!.id}'));
+      socket!.on('connect',
+          (_) => print('connect: ${socket!.id}'));
       store.dispatch(onUniqueChat(
         store: store,
         socket: socket,
@@ -99,13 +101,19 @@ class _InboxState extends State<Inbox> {
       var receiverBox = await box.get(this.receiver);
       Map<String, dynamic> chatHistory = new Map();
       if (receiverBox == null) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
+        SharedPreferences prefs =
+            await SharedPreferences.getInstance();
         String privF = prefs.getString('privkey_f')!;
         String privFp = prefs.getString('privkey_fp')!;
 
-        List<String> kemProcess = generateSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!);
+        List<String> kemProcess = generateSecretKey(
+            this.selfPubkey!,
+            privF,
+            privFp,
+            this.receiverPubkey!);
         chatHistory['sessionKey'] = kemProcess[0];
-        print("${this.senderMe} initialize KEM for ${this.receiver} with encrypted session key ${chatHistory['sessionKey']} hash ${kemProcess[2]}");
+        print(
+            "${this.senderMe} initialize KEM for ${this.receiver} with encrypted session key ${chatHistory['sessionKey']} hash ${kemProcess[2]}");
         socket!.emit('kem', {
           'senderEmail': this.senderMe,
           'receiverEmail': this.receiver,
@@ -121,53 +129,67 @@ class _InboxState extends State<Inbox> {
 
       // Receiving messages
       socket!.on('dispatchMsg', (data) async {
-        print("${data["receiverEmail"]} received encrypted message from ${data["senderEmail"]}: ${data["txtMsg"]}");
+        print(
+            "${data["receiverEmail"]} received encrypted message from ${data["senderEmail"]}: ${data["txtMsg"]}");
         Map<String, dynamic> message = new Map();
-        message["id"] = data["_id"];
+        message["_id"] = data["_id"];
         message["roomID"] = data["roomID"];
         message["senderEmail"] = data["senderEmail"];
         message["receiverEmail"] = data["receiverEmail"];
-        message["txtMsg"] = decryptAES(hiveChatHistory['sessionKey'], data["txtMsg"]);
+        message["txtMsg"] = decryptAES(
+            hiveChatHistory['sessionKey'], data["txtMsg"]);
         message["time"] = data["time"];
-        message["sender"] = data["sender"] == store.state.activeUser;
+        message["sender"] =
+            data["sender"] == store.state.activeUser;
 
-        if(message["txtMsg"] != "") {
+        if (message["txtMsg"] != "") {
           // Check if any message with same Id exists
-          dynamic msgChecker =
-              hiveChatHistory['messages'].where((m) => m["id"] == message["id"]);
+          dynamic msgChecker = hiveChatHistory['messages']
+              .where((m) => m["_id"] == message["_id"]);
 
           if (msgChecker.length == 0) {
             Map<String, dynamic> chatHistory = new Map();
-            chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
-            chatHistory['messages'] = hiveChatHistory['messages'];
+            chatHistory['sessionKey'] =
+                hiveChatHistory['sessionKey'];
+            chatHistory['messages'] =
+                hiveChatHistory['messages'];
             chatHistory['messages'].add(message);
             box.put(this.receiver, chatHistory);
           }
+          await store
+              .dispatch(new UpdateDispatchMsg(message));
           store.dispatch(loadUniqueChats(
             socket: socket,
             store: store,
             currentUserEmail: store.state.user!.email!,
-            otherUser: this.receiver!,));
-          store.dispatch(new UpdateDispatchMsg(message));
+            otherUser: this.receiver!,
+          ));
 
           socket!.emit('readMsg', {'data': data});
         }
-
       });
 
       socket!.on('kem', (data) async {
-        if(this.senderMe == data['receiverEmail']) {
+        if (this.senderMe == data['receiverEmail']) {
           var box = Hive.box(_boxName);
           Map<String, dynamic> chatHistory = new Map();
-          SharedPreferences prefs = await SharedPreferences.getInstance();
+          SharedPreferences prefs =
+              await SharedPreferences.getInstance();
           String privF = prefs.getString('privkey_f')!;
           String privFp = prefs.getString('privkey_fp')!;
-          chatHistory['sessionKey'] = decryptSecretKey(this.selfPubkey!, privF, privFp, this.receiverPubkey!, data['encryptedKey'], data['hash']);
+          chatHistory['sessionKey'] = decryptSecretKey(
+              this.selfPubkey!,
+              privF,
+              privFp,
+              this.receiverPubkey!,
+              data['encryptedKey'],
+              data['hash']);
           chatHistory['messages'] = [];
 
-          if(chatHistory['sessionKey'] != '') {
+          if (chatHistory['sessionKey'] != '') {
             box.put(this.receiver, chatHistory);
-            print("${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
+            print(
+                "${data['receiverEmail']} received KEM request from ${data['senderEmail']} with encrypted session key ${chatHistory['sessionKey']}");
           }
         }
       });
@@ -179,33 +201,50 @@ class _InboxState extends State<Inbox> {
           currentUserEmail: store.state.user!.email!,
           otherUser: this.receiver!));
       List<dynamic> listOfMessages = [];
-      for (int i = 0; i < hiveChatHistory['messages'].length; i++) {
+      for (int i = 0;
+          i < hiveChatHistory['messages'].length;
+          i++) {
         Map<String, dynamic> chat = new Map();
-        chat["id"] = hiveChatHistory['messages'][i]["_id"];
-        chat["roomID"] = hiveChatHistory['messages'][i]["roomID"];
-        chat["senderEmail"] = hiveChatHistory['messages'][i]["senderEmail"];
-        chat["receiverEmail"] = hiveChatHistory['messages'][i]["receiverEmail"];
-        chat["txtMsg"] = hiveChatHistory['messages'][i]["txtMsg"];
-        chat["hash"] = hiveChatHistory['messages'][i]["hash"];
-        chat["time"] = hiveChatHistory['messages'][i]["time"];
-        chat["sender"] = hiveChatHistory['messages'][i]["senderEmail"] ==
+        chat["_id"] = hiveChatHistory['messages'][i]["_id"];
+        chat["roomID"] =
+            hiveChatHistory['messages'][i]["roomID"];
+        chat["senderEmail"] =
+            hiveChatHistory['messages'][i]["senderEmail"];
+        chat["receiverEmail"] =
+            hiveChatHistory['messages'][i]["receiverEmail"];
+        chat["txtMsg"] =
+            hiveChatHistory['messages'][i]["txtMsg"];
+        chat["hash"] =
+            hiveChatHistory['messages'][i]["hash"];
+        chat["time"] =
+            hiveChatHistory['messages'][i]["time"];
+        chat["sender"] = hiveChatHistory['messages'][i]
+                ["senderEmail"] ==
             store.state.user!.email;
 
-        dynamic msgChecker =
-            hiveChatHistory['messages'].where((m) => m["id"] == chat["id"]);
+        dynamic msgChecker = hiveChatHistory['messages']
+            .where((m) => m["_id"] == chat["_id"]);
 
         if (msgChecker.length == 0) {
           Map<String, dynamic> chatHistory = new Map();
-          chatHistory['sessionKey'] = hiveChatHistory['sessionKey'];
-          chatHistory['messages'] = hiveChatHistory['messages'];
+          chatHistory['sessionKey'] =
+              hiveChatHistory['sessionKey'];
+          chatHistory['messages'] =
+              hiveChatHistory['messages'];
           chatHistory['messages'].add(chat);
           listOfMessages.add(chat);
         }
       }
-      store.dispatch(new ReplaceListOfMessages(listOfMessages));
+      store.dispatch(
+          new ReplaceListOfMessages(listOfMessages));
 
       // Group P2P unique chats
-      store.dispatch(groupUniqueChats(socket: socket, store: store, receiverPubkey: this.receiverPubkey, selfPubkey: this.selfPubkey, senderEmail: this.senderMe));
+      store.dispatch(groupUniqueChats(
+          socket: socket,
+          store: store,
+          receiverPubkey: this.receiverPubkey,
+          selfPubkey: this.selfPubkey,
+          senderEmail: this.senderMe));
     } catch (e) {
       print(e.toString());
     }
@@ -236,7 +275,8 @@ class _InboxState extends State<Inbox> {
               ),
               Padding(
                 padding: EdgeInsets.only(left: 10),
-                child: Text(receiverName ?? '', style: TextStyle(fontSize: 14)),
+                child: Text(receiverName ?? '',
+                    style: TextStyle(fontSize: 14)),
               ),
               Padding(
                 padding: EdgeInsets.only(left: 2),
@@ -258,22 +298,31 @@ class _InboxState extends State<Inbox> {
                     child: ListView.builder(
                       itemCount: cMsgs.length,
                       shrinkWrap: true,
-                      padding: EdgeInsets.only(top: 10, bottom: 70),
-                      physics: NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(
+                          top: 10, bottom: 70),
+                      physics:
+                          NeverScrollableScrollPhysics(),
                       itemBuilder: (context, index) {
-                        String txtMsg = cMsgs[index]["txtMsg"];
-                        bool sender = cMsgs[index]["sender"];
+                        String txtMsg =
+                            cMsgs[index]["txtMsg"];
+                        bool sender =
+                            cMsgs[index]["sender"];
 
                         return Container(
                           padding: EdgeInsets.only(
-                              left: 14, right: 14, top: 10, bottom: 10),
+                              left: 14,
+                              right: 14,
+                              top: 10,
+                              bottom: 10),
                           child: Align(
                             alignment: (sender == true
                                 ? Alignment.topLeft
                                 : Alignment.topRight),
                             child: Container(
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius:
+                                    BorderRadius.circular(
+                                        20),
                                 color: (sender == true
                                     ? Color(0xFF1EA955)
                                     : Colors.grey.shade200),
@@ -297,7 +346,8 @@ class _InboxState extends State<Inbox> {
             Align(
               alignment: Alignment.bottomLeft,
               child: Container(
-                padding: EdgeInsets.only(left: 10, bottom: 10, top: 10),
+                padding: EdgeInsets.only(
+                    left: 10, bottom: 10, top: 10),
                 height: 60,
                 width: double.infinity,
                 color: Colors.white,
@@ -311,7 +361,8 @@ class _InboxState extends State<Inbox> {
                           controller: txtController,
                           decoration: InputDecoration(
                               hintText: "Tulis Pesan",
-                              hintStyle: TextStyle(color: Colors.black54),
+                              hintStyle: TextStyle(
+                                  color: Colors.black54),
                               border: InputBorder.none),
                           onChanged: (txtMsg) {
                             if (txtMsg.length > 0) {
@@ -333,7 +384,8 @@ class _InboxState extends State<Inbox> {
                             senderEmail: this.senderMe!,
                             receiverEmail: this.receiver!,
                             selfPubkey: this.selfPubkey,
-                            receiverPubkey: this.receiverPubkey));
+                            receiverPubkey:
+                                this.receiverPubkey));
 
                         // Reset the text Message
                         setState(() {

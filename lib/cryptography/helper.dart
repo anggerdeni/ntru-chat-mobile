@@ -149,6 +149,72 @@ Polynomial inverseF3(Polynomial a) {
   return Fp;
 }
 
+Polynomial inverseFint(Polynomial a, int mod) {
+  List<int> coeffA = List.from(a.coefficients);
+  coeffA.add(0); // padding
+  a = new Polynomial(a.N + 1, coeffA);
+  int N = a.N - 1;
+  int k = 0;
+  Polynomial b = Polynomial.fromDegree(N + 1, d: 0);
+  Polynomial c =
+      Polynomial.fromDegree(N + 1, d: 0, coeff: 0);
+  Polynomial f = a;
+  Polynomial g = new Polynomial.fromDegree(a.N, d: N);
+  g.coefficients[0] = -1; // x^N - 1
+
+  while (true) {
+    while (f.coefficients[0] == 0) {
+      /* f(x) = f(x) / x */
+      for (int i = 1; i < f.N; i++) {
+        f.coefficients[i - 1] = f.coefficients[i];
+      }
+      f.coefficients[f.N - 1] = 0;
+
+      /* c(x) = c(x) * x */
+      for (int i = c.N - 1; i > 0; i--) {
+        c.coefficients[i] = c.coefficients[i - 1];
+      }
+      c.coefficients[0] = 0;
+
+      k++;
+      if (f.isZero())
+        throw new Exception('Not invertible 3');
+    }
+    if (f.isOne()) break;
+    if (f.getDegree() < g.getDegree()) {
+      // exchange f and g
+      Polynomial temp = f;
+      f = g;
+      g = temp;
+      // exchange b and c
+      temp = b;
+      b = c;
+      c = temp;
+    }
+    if (f.coefficients[0] == g.coefficients[0]) {
+      f = f.substractPolyModInt(g, mod);
+      b = b.substractPolyModInt(c, mod);
+    } else {
+      f = f.addPolyModInt(g, mod);
+      b = b.addPolyModInt(c, mod);
+    }
+  }
+  if (b.coefficients[N] != 0) {
+    throw new Exception('Not invertible 4');
+  }
+  // Fp(x) = [+-] x^(N-k) * b(x)
+  Polynomial Fp = Polynomial.fromDegree(N, d: 0, coeff: 0);
+  int j = 0;
+  k %= N;
+  for (int i = N - 1; i >= 0; i--) {
+    j = i - k;
+    if (j < 0) j += N;
+    Fp.coefficients[j] =
+        (f.coefficients[0] * b.coefficients[i]) % mod;
+  }
+  return Fp;
+}
+
 List<int> randomCoefficients(
     int length, int d, int neg_ones_diff) {
   List<int> zeros =
@@ -162,9 +228,52 @@ List<int> randomCoefficients(
   return result;
 }
 
-Polynomial generateRandomPolynomial(int N) {
+List<int> randomBinaryCoefficients(int length, int d) {
+  List<int> zeros = List.filled(length - d, 0);
+  List<int> ones = List.filled(d, 1);
+  List<int> result = List.from(zeros)..addAll(ones);
+  result.shuffle();
+  return result;
+}
+
+List<int> randomTrinaryCoefficients(
+    int length, int d, int neg_ones_diff) {
+  List<int> zeros =
+      List.filled(length - 2 * d - neg_ones_diff, 0);
+  List<int> ones = List.filled(d, 1);
+  List<int> neg_ones = List.filled(d + neg_ones_diff, -1);
+  List<int> result = List.from(zeros)
+    ..addAll(ones)
+    ..addAll(neg_ones);
+  result.shuffle();
+  return result;
+}
+
+Polynomial generateRandomPolynomial(int N,
+    {List<int>? options}) {
+  List<int> coeff = List.filled(N, 0);
+  if (options == null) {
+    options = [-1, 0, 1];
+  }
+  Random rand = new Random();
+  for (int i = 0; i < N; i++) {
+    coeff[i] = options[rand.nextInt(options.length)];
+  }
+
+  return new Polynomial(N, coeff);
+}
+
+Polynomial generateRandomBinaryPolynomialWithD(
+    int N, int d) {
   List<int> coeff =
-      randomCoefficients(N, (N / 3).floor(), -1);
+      randomBinaryCoefficients(N, (N / 3).floor());
+  return new Polynomial(N, coeff);
+}
+
+Polynomial generateRandomTrinaryPolynomialWithD(
+    int N, int d) {
+  List<int> coeff =
+      randomTrinaryCoefficients(N, (N / 3).floor(), -1);
   return new Polynomial(N, coeff);
 }
 

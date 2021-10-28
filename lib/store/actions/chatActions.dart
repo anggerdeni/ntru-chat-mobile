@@ -141,7 +141,7 @@ Future<void>? groupUniqueChats(
       var box = Hive.box(_boxName);
       var hiveChatHistory = box.get(chats["senderEmail"]);
       Map<String, dynamic> chat = new Map();
-      chat["id"] = chats["_id"];
+      chat["_id"] = chats["_id"];
       chat["roomID"] = chats["roomID"];
       chat["senderEmail"] = chats["senderEmail"];
       chat["receiverEmail"] = chats["receiverEmail"];
@@ -154,7 +154,7 @@ Future<void>? groupUniqueChats(
       if (chat["txtMsg"] != "") {
         // Check if any message with same Id exists
         dynamic msgChecker = hiveChatHistory['messages']
-            .where((m) => m["id"] == chats["_id"]);
+            .where((m) => m["_id"] == chats["_id"]);
         if (msgChecker.length == 0) {
           Map<String, dynamic> chatHistory = new Map();
           chatHistory['sessionKey'] =

@@ -13,7 +13,8 @@ class NTRU {
   NTRU() {
     late Polynomial f;
     late Polynomial F;
-    Polynomial g = generateRandomPolynomial(_N);
+    Polynomial g = generateRandomTrinaryPolynomialWithD(
+        _N, (_N / 3).floor());
     late Polynomial fInvP;
     late Polynomial fInvQ;
     late Polynomial testP;
@@ -24,9 +25,11 @@ class NTRU {
       bool inverseFound = false;
       while (!inverseFound) {
         try {
-          F = generateRandomPolynomial(_N);
-          f = F.multiplyIntMod3(_p).addIntMod3(1);
-          fInvP = inverseF3(f);
+          F = generateRandomTrinaryPolynomialWithD(
+              _N, (_N / 3).floor());
+          f = F.multiplyInt(_p);
+          f = f.addIntMod3(1);
+          fInvP = Polynomial.fromDegree(_N, d: 1);
           fInvQ = inverseFq(f, this._q);
           inverseFound = true;
         } catch (e) {

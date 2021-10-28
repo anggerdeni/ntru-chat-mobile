@@ -55,7 +55,6 @@ class ChatState {
 
 // Authentication Reducer
 ChatState authReducer(ChatState state, dynamic action) {
-
   // Push any error message
   if (action is UpdateErrorAction) {
     return state.copyWith(errMsg: action.error);
@@ -80,15 +79,27 @@ ChatState authReducer(ChatState state, dynamic action) {
     List<dynamic>? messages = state.messages;
 
     // Check if any message with same Id exists
-    dynamic msgChecker =
-        messages!.where((m) => m["id"] == action.allMessages['id']);
+    dynamic msgChecker = messages!.where(
+        (m) => m["_id"] == action.allMessages['_id']);
 
     if (msgChecker.length == 0) {
       messages.add(action.allMessages);
       messages.sort((a, b) {
-        int t1,t2;
-        if(a['time'] is int) {t1 = a['time'];} else if (a['time'] is String) {t1 = int.parse(a['time']);} else {t1 = 0;}
-        if(b['time'] is int) {t2 = b['time'];} else if (b['time'] is String) {t2 = int.parse(b['time']);} else {t2 = 0;}
+        int t1, t2;
+        if (a['time'] is int) {
+          t1 = a['time'];
+        } else if (a['time'] is String) {
+          t1 = int.parse(a['time']);
+        } else {
+          t1 = 0;
+        }
+        if (b['time'] is int) {
+          t2 = b['time'];
+        } else if (b['time'] is String) {
+          t2 = int.parse(b['time']);
+        } else {
+          t2 = 0;
+        }
         return t1 - t2;
       });
       return state.copyWith(messages: messages);
@@ -99,14 +110,26 @@ ChatState authReducer(ChatState state, dynamic action) {
     List<dynamic>? messages = store.state.messages;
 
     // Check if any message with same Id exists
-    dynamic msgChecker =
-        messages!.where((m) => m["_id"] == action.updateMsg['_id']);
+    dynamic msgChecker = messages!
+        .where((m) => m["_id"] == action.updateMsg['_id']);
     if (msgChecker.length == 0) {
       messages.add(action.updateMsg);
       messages.sort((a, b) {
-        int t1,t2;
-        if(a['time'] is int) {t1 = a['time'];} else if (a['time'] is String) {t1 = int.parse(a['time']);} else {t1 = 0;}
-        if(b['time'] is int) {t2 = b['time'];} else if (b['time'] is String) {t2 = int.parse(b['time']);} else {t2 = 0;}
+        int t1, t2;
+        if (a['time'] is int) {
+          t1 = a['time'];
+        } else if (a['time'] is String) {
+          t1 = int.parse(a['time']);
+        } else {
+          t1 = 0;
+        }
+        if (b['time'] is int) {
+          t2 = b['time'];
+        } else if (b['time'] is String) {
+          t2 = int.parse(b['time']);
+        } else {
+          t2 = 0;
+        }
         return t1 - t2;
       });
       return state.copyWith(messages: messages);
@@ -132,4 +155,5 @@ ChatState resetReducer(ChatState state, dynamic action) {
 }
 
 // Combine Reducers
-final reducers = combineReducers<ChatState>([authReducer, resetReducer]);
+final reducers =
+    combineReducers<ChatState>([authReducer, resetReducer]);
